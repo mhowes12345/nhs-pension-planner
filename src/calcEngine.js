@@ -221,12 +221,14 @@ function oldPensionsIncomeAt(inputs, currentAge, spa, claimAge) {
 function calcScenarioForAge(inputs, personal, legacy, careYears, privateYears, retirementAge, nhsClaimAge) {
   const { currentAge, statePensionAge: spa } = personal;
 
-  // CARE accrual stops at retirementAge; from there to nhsClaimAge the pot only revalues (no new accrual).
+  // CARE accrual stops at retirementAge. If retirement precedes claim, the member becomes
+  // deferred — no further accrual, and no further real growth either: NHS 2015 Scheme
+  // deferred CARE pensions revalue at CPI only (not the active member's CPI+1.5%), and this
+  // model already strips CPI out throughout, so the deferred-period real growth is 0%. The
+  // 1.5% real revaluation rate only applies while still actively contributing.
   const careRowAtRetirement = findByAge(careYears, retirementAge);
   const careAtRetirement = careRowAtRetirement ? careRowAtRetirement.closingPot : null;
-  const yearsToClaim = nhsClaimAge - retirementAge;
-  const careAtClaim =
-    careAtRetirement === null ? null : careAtRetirement * Math.pow(1 + inputs.careRevaluationRealRate, yearsToClaim);
+  const careAtClaim = careAtRetirement;
   const nhs2015BeforeReduction = careAtClaim === null ? null : careAtClaim + inputs.apPurchasedAnnual;
 
   const reductionFactor = earlyRetirementReductionFactor(inputs, spa, nhsClaimAge);
