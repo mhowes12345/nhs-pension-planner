@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NHS + Private Pension Retirement Modeller</title>
+<link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+<header class="app-header">
+  <h1>NHS + Private Pension Retirement Modeller</h1>
+  <p class="disclaimer">Projections based on the numbers and assumptions you enter. Not financial advice — speak to a regulated adviser before making retirement decisions.</p>
+</header>
+
+<div class="app-layout">
+  <form id="inputsForm" class="inputs-panel">
+
+    <fieldset>
+      <legend>Personal</legend>
+      <label data-note="Used to calculate your current age and State Pension age automatically below">Date of birth
+        <input type="date" name="dateOfBirth" value="1982-03-15" required>
+      </label>
+      <label data-note="e.g. 2026 for the 2026/27 tax year">Current tax year (start year)
+        <input type="number" name="currentTaxYearStart" value="2026" step="1" required>
+      </label>
+      <label data-note="Defaulted to the 2026/27 full new State Pension. Get YOUR real figure from your gov.uk State Pension forecast — it's lower if you have gaps in your National Insurance record (need 35 qualifying years for the full amount, 10 minimum to get anything).">Estimated full State Pension (annual, £)
+        <input type="number" name="estimatedStatePensionAnnual" value="0" step="0.01" min="0" required>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>NHS Legacy Scheme (1995 / 2008 Section)</legend>
+      <p class="hint">Enter these straight from your TRS/ABS 'Standard Benefits' table.</p>
+      <label data-note="From the 'Pension' row of your 1995 Section Annual Benefit Statement. Leave as 0 if not applicable">1995 Section — Pension (£/yr)
+        <input type="number" name="legacy1995Pension" value="0" step="1" min="0">
+      </label>
+      <label data-note="From the 'Lump Sum' row of your 1995 Section statement">1995 Section — Lump Sum (£)
+        <input type="number" name="legacy1995LumpSum" value="0" step="1" min="0">
+      </label>
+      <label data-note="From the 'Pension' row of your 2008 Section Annual Benefit Statement. Leave as 0 if not applicable">2008 Section — Pension (£/yr)
+        <input type="number" name="legacy2008Pension" value="0" step="1" min="0">
+      </label>
+      <label data-note="Usually £0.00 on the statement — the 2008 Section has no automatic lump sum">2008 Section — Lump Sum (£)
+        <input type="number" name="legacy2008LumpSum" value="0" step="1" min="0">
+      </label>
+      <label data-note="As long as you don't have a 5+ year gap in NHS pensionable service, your 1995/2008 legacy benefits stay 'final salary linked' and keep growing in real terms every year until you claim them (see the rate below), rather than being frozen at your TRS/ABS value. Set to 'No' to model a career break breaking this link.">Continuous NHS pensionable service (no 5+ year break)?
+        <select name="legacyContinuousService">
+          <option value="Yes" selected>Yes</option>
+          <option value="No">No</option>
+        </select>
+      </label>
+      <label data-note="For GPs, legacy benefits are uprated by 'dynamised income' — Pensions Increase (CPI) + 1.5%, with a floor of 1.5% even if CPI is nil/negative. In today's-money terms (stripping out CPI, as this whole model does), that's simply +1.5% real per year. If you're an Officer rather than a GP, your link is to current pay scales instead — which can occasionally undershoot inflation, so 1.5% may be optimistic for that case; adjust down if so.">Assumed legacy pension REAL growth rate p.a. (%)
+        <input type="number" name="legacyRealGrowthRate" value="1.5" step="0.1">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>NHS 2015 Scheme (CARE)</legend>
+      <label data-note="Should already reflect McCloud remedy correction — see README">2015 CARE pot — most recent TRS/ABS value (£)
+        <input type="number" name="carePotLastStatement" value="0" step="1" min="0" required>
+      </label>
+      <label data-note="TRS statements are often out of date — e.g. a statement 'Updated To 31/03/2024' means enter 2024 here. The model automatically brings your pot up to date using your current pay and the assumptions below, before projecting forward.">...that TRS/ABS value is as at tax year ending
+        <input type="number" name="carePotStatementTaxYearEnd" value="2024" step="1" required>
+      </label>
+      <label data-note="Total pensionable earnings this year, all NHS posts combined">Current annual pensionable pay (£)
+        <input type="number" name="currentPensionablePay" value="0" step="1" min="0" required>
+      </label>
+      <label data-note="This is growth ABOVE inflation, not your total pay rise. AfC awards often just track or slightly beat inflation — 0-1.5% real is a reasonable long-run planning assumption. See Assumptions tab.">Assumed REAL pay growth rate p.a. (%)
+        <input type="number" name="payRealGrowthRate" value="1.0" step="0.1">
+      </label>
+      <label data-note="Scheme revalues at CPI + 1.5% — since this whole model works in today's money, use just the +1.5% real element here (not CPI + 1.5%). See Assumptions tab for why.">Assumed CARE revaluation rate p.a., REAL (%)
+        <input type="number" name="careRevaluationRealRate" value="1.5" step="0.1">
+      </label>
+      <label data-note="Standard rate is 1/54 of pensionable pay each year">2015 Scheme accrual rate (1/x)
+        <input type="number" name="careAccrualRateDenominator" value="54" step="1" min="1" required>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Private Pensions &amp; Savings</legend>
+      <label>SIPP current balance (£)
+        <input type="number" name="sippBalance" value="0" step="1" min="0">
+      </label>
+      <label data-note="Find this on your provider's annual statement as 'gross contribution' or 'total contribution including tax relief'. If you pay in net (relief at source), gross = net x 1.25 (basic rate 20% relief is added automatically). If you're a higher/additional rate taxpayer, extra relief you claim via Self Assessment is a tax saving to you personally, but doesn't change this gross figure.">SIPP annual contribution, gross (£)
+        <input type="number" name="sippContribution" value="0" step="1" min="0">
+      </label>
+      <label data-note="See Assumptions tab for the historical reasoning behind this figure — it should reflect real, above-inflation returns, net of platform/fund charges, for your actual asset mix (not 100% equities).">SIPP assumed REAL growth rate p.a. (%)
+        <input type="number" name="sippGrowthRate" value="4.5" step="0.1">
+      </label>
+      <label>LISA current balance (£)
+        <input type="number" name="lisaBalance" value="0" step="1" min="0">
+      </label>
+      <label data-note="£4,000 annual cap; 25% government bonus added separately below. You CANNOT open a new LISA after age 39, and your last eligible contribution year is age 49 — contributions automatically stop in the projection below from age 50, even though this cell still shows your figure. LISAs are also being phased out for NEW savers from ~April 2028 — see Assumptions tab for what this does and doesn't mean for you.">LISA annual contribution (£)
+        <input type="number" name="lisaContribution" value="0" step="1" min="0">
+      </label>
+      <label>LISA assumed REAL growth rate p.a. (%)
+        <input type="number" name="lisaGrowthRate" value="4.5" step="0.1">
+      </label>
+      <label>S&amp;S ISA current balance (£)
+        <input type="number" name="isaBalance" value="0" step="1" min="0">
+      </label>
+      <label>S&amp;S ISA annual contribution (£)
+        <input type="number" name="isaContribution" value="0" step="1" min="0">
+      </label>
+      <label>S&amp;S ISA assumed REAL growth rate p.a. (%)
+        <input type="number" name="isaGrowthRate" value="4.5" step="0.1">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>NHS Additional Pension (AP) &amp; AVCs</legend>
+      <label data-note="Extra GUARANTEED annual NHS pension you've bought (up to ~£8,946/yr for 2026/27). Leave as 0 if you haven't bought any. This adds directly to your NHS income and is subject to the same early retirement reduction as your main 2015 Scheme pension (see ERRBO section below).">Additional Pension (AP) purchased — annual amount (£)
+        <input type="number" name="apPurchasedAnnual" value="0" step="1" min="0">
+      </label>
+      <label data-note="In-house Additional Voluntary Contributions — an INVESTED (not guaranteed) top-up within the NHS scheme. Leave as 0 if you don't have one.">NHS AVC current balance (£)
+        <input type="number" name="avcBalance" value="0" step="1" min="0">
+      </label>
+      <label>NHS AVC annual contribution (£)
+        <input type="number" name="avcContribution" value="0" step="1" min="0">
+      </label>
+      <label>NHS AVC assumed REAL growth rate p.a. (%)
+        <input type="number" name="avcGrowthRate" value="4.5" step="0.1">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Early Retirement &amp; ERRBO</legend>
+      <label data-note="Early Retirement Reduction Buy Out: lets 2015 Scheme members buy out some/all of the reduction for retiring before their Normal Pension Age. Enter how many years you've bought out (0 if none). This offsets the reduction applied for Scenarios claiming before your Normal Pension Age/State Pension Age.">ERRBO — years of reduction bought out
+        <input type="number" name="errboYearsBoughtOut" value="0" step="1" min="0">
+      </label>
+      <label data-note="Illustrative flat rate. NHSBSA's real reduction factors are non-linear (roughly 3-5%+ per year, increasing the further before Normal Pension Age) — check the exact factors on your TRS/ABS or NHSBSA's early retirement calculator for a precise figure.">Assumed early retirement reduction p.a., not bought out (%)
+        <input type="number" name="earlyRetirementReductionRate" value="5.0" step="0.1">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>General Investment Account (GIA)</legend>
+      <label data-note="Taxable investments held outside a pension or ISA — e.g. once you're maxing your £20,000 ISA allowance. Leave as 0 if not applicable.">GIA current balance (£)
+        <input type="number" name="giaBalance" value="0" step="1" min="0">
+      </label>
+      <label>GIA annual contribution (£)
+        <input type="number" name="giaContribution" value="0" step="1" min="0">
+      </label>
+      <label data-note="Same reasoning as SIPP/ISA on the Assumptions tab — this is the pre-tax figure; tax drag is applied separately below">GIA assumed REAL growth rate p.a., gross (%)
+        <input type="number" name="giaGrowthRateGross" value="4.5" step="0.1">
+      </label>
+      <label data-note="Sets a default tax drag estimate below based on your tax band — see Assumptions tab for the reasoning">Marginal tax rate (for GIA tax drag estimate)
+        <select name="marginalTaxBand">
+          <option value="Basic" selected>Basic (20%)</option>
+          <option value="Higher">Higher (40%)</option>
+          <option value="Additional">Additional (45%)</option>
+          <option value="None">None</option>
+        </select>
+      </label>
+    </fieldset>
+
+    <fieldset id="oldPensionsFieldset">
+      <legend>Old / Frozen Pensions</legend>
+      <p class="hint">Add up to 3 pensions from before the NHS (or other past employers).</p>
+      <!-- old pension rows injected by app.js -->
+    </fieldset>
+
+    <fieldset>
+      <legend>Annual Allowance</legend>
+      <label data-note="2026/27 standard limit before any tapering">Standard Annual Allowance (£)
+        <input type="number" name="standardAnnualAllowance" value="0" step="1" min="0">
+      </label>
+      <label data-note="Tick 'Yes' if your adjusted income (broadly: taxable income + all pension contributions) is likely to exceed £260,000">High earner? (tapered Annual Allowance may apply)
+        <select name="isHighEarner">
+          <option value="No" selected>No</option>
+          <option value="Yes">Yes</option>
+        </select>
+      </label>
+      <label data-depends-on="isHighEarner" data-depends-value="Yes" data-note="Only used if 'High earner' above is Yes. Tapers your Annual Allowance down by £1 for every £2 over £260,000, to a minimum of £10,000.">Adjusted income, if high earner (£)
+        <input type="number" name="adjustedIncome" value="0" step="1" min="0">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Drawdown Strategy</legend>
+      <label data-note="'4% Safe Withdrawal' assumes the pot lasts indefinitely. 'Bridge' assumes you stop work at this scenario's age and deliberately spend your private pots down to zero by your State Pension Age, to give your NHS/State pensions longer to grow (or to avoid claiming your NHS pension early) — this gives a MUCH higher annual figure while it lasts, but nothing left over from these pots after that age. This only affects any pot left over once your NHS claim age is reached — if you're already bridging to a later claim age (see Scenarios below), the pot is spent down to zero getting you there regardless of this setting.">How will you draw your private pots?
+        <select name="drawdownStrategy">
+          <option value="4% Safe Withdrawal (perpetual)" selected>4% Safe Withdrawal (perpetual)</option>
+          <option value="Bridge - deplete until State Pension Age">Bridge — deplete until State Pension Age</option>
+        </select>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Scenarios — retirement ages to compare</legend>
+      <p class="hint">'Retirement age' is when you stop working. 'NHS pension claim age' is a separate choice — when you actually start drawing your NHS pension. They default to the same age (claim immediately). Increase the claim age above the retirement age to model stopping work early but deferring your NHS pension, living off your private pots in the meantime.</p>
+
+      <label data-note="e.g. Normal Minimum Pension Age">Scenario A — retirement age (stop working)
+        <input type="number" name="scenarioAAge" value="57" step="1" min="40" max="90">
+      </label>
+      <label data-note="Defaults to the same age (claim immediately). Increase to defer.">Scenario A — NHS pension claim age
+        <input type="number" name="scenarioAClaimAge" value="57" step="1" min="40" max="90">
+      </label>
+
+      <label>Scenario B — retirement age (stop working)
+        <input type="number" name="scenarioBAge" value="60" step="1" min="40" max="90">
+      </label>
+      <label data-note="Defaults to the same age (claim immediately). Increase to defer.">Scenario B — NHS pension claim age
+        <input type="number" name="scenarioBClaimAge" value="60" step="1" min="40" max="90">
+      </label>
+
+      <label data-note="e.g. State Pension Age">Scenario C — retirement age (stop working)
+        <input type="number" name="scenarioCAge" value="67" step="1" min="40" max="90">
+      </label>
+      <label data-note="Defaults to the same age (claim immediately). Increase to defer.">Scenario C — NHS pension claim age
+        <input type="number" name="scenarioCClaimAge" value="67" step="1" min="40" max="90">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Target Retirement Income</legend>
+      <label data-note="See the 'Target Income Calculator' results for what this implies you'd need to save extra, each year, from now">Target retirement income, annual, today's money (£)
+        <input type="number" name="targetIncome" value="0" step="1" min="0">
+      </label>
+      <label>Age you want to retire on this income
+        <input type="number" name="targetAge" value="60" step="1" min="40" max="90">
+      </label>
+      <label data-note="Central assumption for the calculator — it also shows a more cautious and more optimistic version either side of this">Assumed REAL growth rate on extra savings (%)
+        <input type="number" name="targetSavingsGrowthRate" value="4.5" step="0.1">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Retirement Living Standards Comparison</legend>
+      <label data-note="Used to compare your projected income against PLSA/Pensions UK benchmarks">Household type
+        <select name="householdType">
+          <option value="One-person" selected>One-person</option>
+          <option value="Two-person">Two-person</option>
+        </select>
+      </label>
+    </fieldset>
+
+  </form>
+
+  <div id="results" class="results-panel" aria-live="polite"></div>
+</div>
+
+<script src="src/calcEngine.js"></script>
+<script src="src/app.js"></script>
+</body>
+</html>

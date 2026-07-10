@@ -1,0 +1,324 @@
+:root {
+  --bg: #0f1216;
+  --panel: #171b21;
+  --panel-border: #2a2f38;
+  --text: #e6e9ee;
+  --text-dim: #9aa4b2;
+  --accent: #4f9dff;
+  --ok: #4fd18b;
+  --warn: #ffb84f;
+  --below: #ff6b6b;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.app-header {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid var(--panel-border);
+}
+.app-header h1 { margin: 0 0 0.3rem; font-size: 1.3rem; }
+.disclaimer { margin: 0; color: var(--text-dim); font-size: 0.85rem; max-width: 60rem; }
+
+.app-layout {
+  display: grid;
+  grid-template-columns: 22rem 1fr;
+  gap: 1rem;
+  align-items: start;
+  padding: 1rem;
+}
+/* Grid items default to min-width:auto, which floors their track at the content's
+   min-content size and can force the whole grid wider than the viewport. Override so
+   the tracks can actually shrink to the available space and let overflow-x:auto
+   wrappers (.table-scroll) do the clipping instead. */
+.inputs-panel, .results-panel {
+  min-width: 0;
+}
+.inputs-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+  position: sticky;
+  top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .app-layout { grid-template-columns: 1fr; }
+  .inputs-panel {
+    max-height: none;
+    overflow-y: visible;
+    position: static;
+  }
+
+  /* Reference tables (Retirement Living Standards / Glossary / Assumptions) switch from
+     a horizontally-scrolling table to a stacked term/definition layout — a wide nowrap
+     first column reading sideways is awkward on a phone. */
+  .reference-table tr.reference-table-head {
+    display: none;
+  }
+  .reference-table {
+    display: block;
+    max-height: none;
+    overflow-y: visible;
+  }
+  .reference-table tr {
+    display: block;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  .reference-table tr:last-child {
+    border-bottom: none;
+  }
+  .reference-table td {
+    display: block;
+    border-bottom: none;
+    padding: 0.15rem 0;
+    white-space: normal;
+  }
+  .reference-table td:first-child {
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--text);
+  }
+  .reference-table td:not(:first-child)::before {
+    content: attr(data-label) ": ";
+    font-weight: 600;
+    color: var(--accent);
+  }
+}
+
+fieldset {
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 0.8rem 1rem 1rem;
+}
+legend {
+  padding: 0 0.4rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-bottom: 0.55rem;
+}
+label:last-child { margin-bottom: 0; }
+
+input, select {
+  display: block;
+  width: 100%;
+  margin-top: 0.2rem;
+  padding: 0.4rem 0.5rem;
+  background: #0d1014;
+  border: 1px solid var(--panel-border);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+label[data-note] {
+  cursor: help;
+  text-decoration: underline dotted var(--text-dim);
+  text-underline-offset: 3px;
+}
+
+.field-tooltip {
+  display: none;
+  position: fixed;
+  z-index: 100;
+  max-width: 22rem;
+  background: #1c222b;
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+  pointer-events: none;
+}
+
+.old-pension-row {
+  border-top: 1px dashed var(--panel-border);
+  padding-top: 0.6rem;
+  margin-top: 0.6rem;
+}
+.old-pension-row:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+.old-pension-row h3 { margin: 0 0 0.4rem; font-size: 0.82rem; color: var(--text); }
+
+.results-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+
+.scenario-card, .panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+}
+.scenario-card h3, .panel h2 {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+}
+.panel h2 { font-size: 1.05rem; }
+
+.bridge-callout {
+  background: rgba(255,184,79,0.1);
+  border: 1px solid rgba(255,184,79,0.3);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  margin-bottom: 0.6rem;
+}
+.bridge-label {
+  font-size: 0.72rem;
+  color: var(--warn);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.15rem;
+}
+.bridge-amount {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.bridge-amount span {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text-dim);
+  margin-left: 0.2rem;
+}
+
+.scenario-total-label {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-bottom: 0.15rem;
+}
+
+.scenario-total {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+.scenario-total span {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--text-dim);
+  margin-left: 0.2rem;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  margin-bottom: 0.7rem;
+  background: #333;
+}
+.badge-below { background: rgba(255,107,107,0.18); color: var(--below); }
+.badge-minimum { background: rgba(255,184,79,0.18); color: var(--warn); }
+.badge-moderate { background: rgba(79,157,255,0.18); color: var(--accent); }
+.badge-comfortable { background: rgba(79,209,139,0.18); color: var(--ok); }
+
+.breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.breakdown-table td, .breakdown-table th {
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid var(--panel-border);
+  text-align: left;
+}
+.breakdown-table td:last-child, .breakdown-table th:last-child {
+  text-align: right;
+}
+
+.note {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin: 0.6rem 0 0;
+}
+.note.ok { color: var(--ok); }
+.note.warn { color: var(--warn); }
+
+.projection-details summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+/* Plain-div scroll wrapper: unlike overflow-x on a <table> itself, a div reliably
+   clips an oversized table instead of letting it force the page wider. */
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.projection-table {
+  max-height: 20rem;
+  display: block;
+  overflow-y: auto;
+}
+
+.reference-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  display: block;
+  max-height: 24rem;
+  overflow-y: auto;
+}
+.reference-table th, .reference-table td {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--panel-border);
+  text-align: left;
+  vertical-align: top;
+}
+.reference-table th:first-child, .reference-table td:first-child {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.reference-table td:not(:first-child) {
+  color: var(--text-dim);
+}
+
+.footer-note {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  text-align: center;
+}

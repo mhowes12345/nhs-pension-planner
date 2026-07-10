@@ -1,0 +1,9 @@
+{
+  "name": "nhs-pension-webapp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Calculation engine for the NHS + private pension retirement modeller",
+  "scripts": {
+    "test": "node --test"
+  }
+}
