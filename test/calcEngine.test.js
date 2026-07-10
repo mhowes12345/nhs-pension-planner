@@ -1,11 +1,14 @@
 // Validates calcEngine.js against exact numeric ground truth pulled from the live
 // spreadsheet via Excel COM automation (see scratchpad/dump_values.ps1,
-// scratchpad/make_scenario2.ps1, scratchpad/make_deferred.ps1). Three cases are checked:
-// the workbook's shipped base-case inputs, an edge-case scenario that exercises the paths
-// the base case leaves at zero (legacy pensions, AP, AVC, GIA tax drag, DB+DC old
-// pensions, AA taper, ERRBO), and a deferred-claim scenario (Scenario B: retire at 60,
-// claim the NHS pension at State Pension Age) that exercises the private-pot bridging
-// logic added for the retirementAge/nhsClaimAge split.
+// scratchpad/make_scenario2.ps1, scratchpad/make_deferred.ps1,
+// scratchpad/make_bridge_expiry_test.ps1). Four cases are checked: the workbook's shipped
+// base-case inputs, an edge-case scenario that exercises the paths the base case leaves at
+// zero (legacy pensions, AP, AVC, GIA tax drag, DB+DC old pensions, AA taper, ERRBO), a
+// deferred-claim scenario (Scenario B: retire at 60, claim the NHS pension at State Pension
+// Age) that exercises the private-pot bridging logic, and a Bridge-drawdown-strategy
+// scenario where the NHS pension is claimed before SPA — this exercises the fix for the
+// ongoing drawdown (itself only sustainable until SPA under that strategy) being wrongly
+// carried into the from-SPA-onwards total instead of dropping to zero there.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -24,6 +27,7 @@ function approxEqual(actual, expected, label) {
 const gt1 = JSON.parse(fs.readFileSync(path.join(__dirname, 'ground_truth.json'), 'utf8'));
 const gt2 = JSON.parse(fs.readFileSync(path.join(__dirname, 'ground_truth_2.json'), 'utf8'));
 const gtDeferred = JSON.parse(fs.readFileSync(path.join(__dirname, 'ground_truth_deferred.json'), 'utf8'));
+const gtBridgeExpiry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ground_truth_bridge_expiry.json'), 'utf8'));
 
 const ASOF_DATE = new Date(2026, 6, 9); // matches TODAY() at ground-truth extraction time
 
@@ -131,6 +135,25 @@ const deferredInputs = Object.assign({}, defaultInputs, {
   ],
 });
 
+// Bridge-to-SPA drawdown strategy + claiming the NHS pension immediately (below SPA) on
+// Scenarios A and B — see scratchpad/make_bridge_expiry_test.ps1. Reproduces the reported
+// bug: the ongoing drawdown row is a temporary elevated rate under this strategy (it drains
+// the pot to zero by SPA) and must not be carried into the from-SPA-onwards total.
+const bridgeExpiryInputs = Object.assign({}, defaultInputs, {
+  currentPensionablePay: 90000,
+  carePotLastStatement: 60000,
+  sippBalance: 300000,
+  sippContribution: 15000,
+  isaBalance: 100000,
+  isaContribution: 10000,
+  drawdownStrategy: 'Bridge - deplete until State Pension Age',
+  scenarios: [
+    { retirementAge: 60, nhsClaimAge: 60 },
+    { retirementAge: 60, nhsClaimAge: 60 },
+    { retirementAge: 67, nhsClaimAge: 67 },
+  ],
+});
+
 function validateAgainst(t, inputs, gt) {
   const model = runModel(inputs, ASOF_DATE);
 
@@ -211,11 +234,12 @@ function validateAgainst(t, inputs, gt) {
     });
   });
 
-  // The spreadsheet has no equivalent of this field (it only models a claim-age steady
-  // state), so this checks internal consistency rather than spreadsheet ground truth:
-  // once a scenario reaches State Pension Age, the State Pension should be added on top
-  // of the claim-age total, not silently missing from every year after SPA too.
+  // Once a scenario reaches State Pension Age, the State Pension should be added on top of
+  // the claim-age total (rather than silently missing from every year after SPA too) --
+  // but if claiming before SPA under the 'Bridge to SPA' drawdown strategy, the ongoing
+  // drawdown itself is only sustainable until SPA, so it must NOT be carried forward too.
   t.test('State Pension Age phase', () => {
+    const ss = gt['Scenario Summary'];
     const cols = ['B', 'C', 'D'];
     model.scenarioSummary.scenarios.forEach((s, i) => {
       const col = cols[i];
@@ -225,13 +249,21 @@ function validateAgainst(t, inputs, gt) {
         s.nhsClaimAge >= model.personal.statePensionAge,
         `Scenario ${col} statePensionIncludedFromClaimAge`
       );
+      const expectedDrawdownExpires =
+        !s.statePensionIncludedFromClaimAge && inputs.drawdownStrategy !== '4% Safe Withdrawal (perpetual)' && (s.drawdown ?? 0) > 0;
+      assert.strictEqual(s.drawdownExpiresAtSpa, expectedDrawdownExpires, `Scenario ${col} drawdownExpiresAtSpa`);
+
+      // Real spreadsheet ground truth (Scenario Summary row 23) rather than just internal
+      // consistency, now that every fixture includes it.
+      approxEqual(s.totalIncomeFromStatePensionAge, ss[`${col}23`], `Scenario ${col} totalIncomeFromStatePensionAge (${col}23)`);
+
       if (s.statePensionIncludedFromClaimAge) {
         approxEqual(s.totalIncomeFromStatePensionAge, s.totalIncomeFromClaimAge, `Scenario ${col} totalIncomeFromStatePensionAge (already included)`);
       } else {
         approxEqual(
           s.totalIncomeFromStatePensionAge,
-          s.totalIncomeFromClaimAge + inputs.estimatedStatePensionAnnual,
-          `Scenario ${col} totalIncomeFromStatePensionAge (State Pension added on top)`
+          s.totalIncomeFromClaimAge + inputs.estimatedStatePensionAnnual - (s.drawdownExpiresAtSpa ? s.drawdown : 0),
+          `Scenario ${col} totalIncomeFromStatePensionAge (State Pension added, expired drawdown removed)`
         );
       }
     });
@@ -285,4 +317,20 @@ test('deferred claim age (Scenario B: retire 60, claim at SPA) matches spreadshe
   assert.strictEqual(b.privatePotRemaining, 0, 'Scenario B: pot fully used bridging to claim age');
   assert.strictEqual(b.drawdown, 0, 'Scenario B: nothing left for ongoing drawdown');
   assert.ok(b.bridgeIncome > 0, 'Scenario B: bridge income should be positive');
+});
+
+test('Bridge drawdown strategy claimed before SPA matches spreadsheet ground truth', (t) => {
+  validateAgainst(t, bridgeExpiryInputs, gtBridgeExpiry);
+
+  // Extra sanity checks specific to the reported bug: the claim-age total includes a huge
+  // temporary drawdown that must not survive into the from-SPA-onwards total.
+  const model = runModel(bridgeExpiryInputs, ASOF_DATE);
+  const [a] = model.scenarioSummary.scenarios;
+  assert.strictEqual(a.bridgeYears, 0, 'Scenario A: no deferral gap (claims immediately at 60)');
+  assert.ok(a.drawdown > 100000, 'Scenario A: ongoing drawdown should be the large temporary Bridge-strategy figure');
+  assert.strictEqual(a.drawdownExpiresAtSpa, true, 'Scenario A: drawdown is flagged as expiring at SPA');
+  assert.ok(
+    a.totalIncomeFromStatePensionAge < a.totalIncomeFromClaimAge,
+    'Scenario A: income from SPA onwards should be LOWER than the temporary claim-age total, not higher'
+  );
 });

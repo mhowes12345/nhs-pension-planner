@@ -221,7 +221,20 @@ function renderScenarioCard(s, i, model, inputs) {
     ? `Scenario ${label} — retire ${s.retirementAge}, claim ${s.nhsClaimAge}`
     : `Scenario ${label} — Age ${s.retirementAge}`;
 
-  const getsStatePensionLater = !s.statePensionIncludedFromClaimAge && inputs.estimatedStatePensionAnnual > 0;
+  const gainsStatePension = !s.statePensionIncludedFromClaimAge && inputs.estimatedStatePensionAnnual > 0;
+  const showSpaCallout = gainsStatePension || s.drawdownExpiresAtSpa;
+
+  let spaLabel, spaAmountHtml;
+  if (s.drawdownExpiresAtSpa && gainsStatePension) {
+    spaLabel = 'private pot income ends (Bridge strategy), State Pension begins';
+    spaAmountHtml = `<span>&rarr; ${money(s.totalIncomeFromStatePensionAge)}/yr total</span>`;
+  } else if (s.drawdownExpiresAtSpa) {
+    spaLabel = 'private pot income ends (Bridge strategy)';
+    spaAmountHtml = `<span>&rarr; ${money(s.totalIncomeFromStatePensionAge)}/yr total</span>`;
+  } else {
+    spaLabel = '+ State Pension';
+    spaAmountHtml = `+${money(inputs.estimatedStatePensionAnnual)}/yr <span>&rarr; ${money(s.totalIncomeFromStatePensionAge)}/yr total</span>`;
+  }
 
   return `
     <article class="scenario-card">
@@ -239,10 +252,11 @@ function renderScenarioCard(s, i, model, inputs) {
         ${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
       </table>
       ${s.reductionFactor < 1 ? `<p class="note">Early retirement reduction: ${pctFmt(1 - s.reductionFactor)} cut (${pctFmt(s.reductionFactor)} retained)</p>` : ''}
-      ${getsStatePensionLater ? `
+      ${s.drawdownExpiresAtSpa ? `<p class="note warn">The private-pot drawdown above is temporary — the Bridge strategy deliberately drains it to zero by State Pension Age (${s.statePensionAge}), so this total won't last. See below for what happens after.</p>` : ''}
+      ${showSpaCallout ? `
         <div class="spa-callout">
-          <div class="spa-callout-label">Then, from State Pension Age ${s.statePensionAge}: + State Pension</div>
-          <div class="spa-callout-amount">+${money(inputs.estimatedStatePensionAnnual)}/yr <span>&rarr; ${money(s.totalIncomeFromStatePensionAge)}/yr total</span></div>
+          <div class="spa-callout-label">Then, from State Pension Age ${s.statePensionAge}: ${spaLabel}</div>
+          <div class="spa-callout-amount">${spaAmountHtml}</div>
         </div>
       ` : ''}
       ${s.lumpSum ? `<p class="note">One-off tax-free lump sum: ${money(s.lumpSum)}</p>` : ''}

@@ -254,10 +254,20 @@ function calcScenarioForAge(inputs, personal, legacy, careYears, privateYears, r
   // steady-state figure that never includes the State Pension (statePension is 0 above).
   // In reality it starts once they reach SPA — model that as a third phase on top of the
   // claim-age total, rather than silently excluding it from every year after SPA too.
+  //
+  // But that claim-age total can ALSO contain a drawdown figure that isn't actually
+  // steady: the 'Bridge to SPA' strategy deliberately drains the private pot to zero by
+  // SPA (drawdownRateAt returns 1/(SPA-claimAge) instead of 4%), producing a much bigger
+  // annual figure while it lasts. If claiming before SPA under that strategy, `drawdown`
+  // is itself only valid until SPA — it must be dropped, not carried into the
+  // from-SPA-onwards total, or income appears to almost double forever when really it's
+  // about to run out.
   const statePensionIncludedFromClaimAge = nhsClaimAge >= spa;
+  const drawdownExpiresAtSpa =
+    !statePensionIncludedFromClaimAge && inputs.drawdownStrategy !== '4% Safe Withdrawal (perpetual)' && (drawdown ?? 0) > 0;
   const totalIncomeFromStatePensionAge = statePensionIncludedFromClaimAge
     ? totalIncomeFromClaimAge
-    : totalIncomeFromClaimAge + inputs.estimatedStatePensionAnnual;
+    : totalIncomeFromClaimAge + inputs.estimatedStatePensionAnnual - (drawdownExpiresAtSpa ? drawdown : 0);
 
   return {
     retirementAge,
@@ -271,6 +281,7 @@ function calcScenarioForAge(inputs, personal, legacy, careYears, privateYears, r
     statePensionAge: spa,
     statePensionIncludedFromClaimAge,
     totalIncomeFromStatePensionAge,
+    drawdownExpiresAtSpa,
     privatePot,
     bridgeYears,
     bridgeIncome,
