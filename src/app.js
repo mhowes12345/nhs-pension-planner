@@ -237,6 +237,8 @@ function renderScenarioCard(s, i, model, inputs) {
         ${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
       </table>
       ${s.reductionFactor < 1 ? `<p class="note">Early retirement reduction: ${pctFmt(1 - s.reductionFactor)} cut (${pctFmt(s.reductionFactor)} retained)</p>` : ''}
+      ${s.statePension === 0 && s.nhsClaimAge < model.personal.statePensionAge && inputs.estimatedStatePensionAnnual > 0
+        ? `<p class="note warn">State Pension not included — this scenario's claim age (${s.nhsClaimAge}) is before your State Pension Age (${model.personal.statePensionAge}).</p>` : ''}
       ${s.lumpSum ? `<p class="note">One-off tax-free lump sum: ${money(s.lumpSum)}</p>` : ''}
       <p class="note">Private pot at retirement: ${money(s.privatePot)}</p>
     </article>`;
