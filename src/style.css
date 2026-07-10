@@ -226,6 +226,31 @@ label[data-note] {
   margin-bottom: 0.15rem;
 }
 
+.spa-callout {
+  background: rgba(79,157,255,0.1);
+  border: 1px solid rgba(79,157,255,0.3);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  margin-top: 0.6rem;
+}
+.spa-callout-label {
+  font-size: 0.72rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.15rem;
+}
+.spa-callout-amount {
+  font-size: 1rem;
+  font-weight: 700;
+}
+.spa-callout-amount span {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-dim);
+  margin-left: 0.2rem;
+}
+
 .scenario-total {
   font-size: 1.8rem;
   font-weight: 700;

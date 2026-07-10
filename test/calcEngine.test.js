@@ -211,6 +211,32 @@ function validateAgainst(t, inputs, gt) {
     });
   });
 
+  // The spreadsheet has no equivalent of this field (it only models a claim-age steady
+  // state), so this checks internal consistency rather than spreadsheet ground truth:
+  // once a scenario reaches State Pension Age, the State Pension should be added on top
+  // of the claim-age total, not silently missing from every year after SPA too.
+  t.test('State Pension Age phase', () => {
+    const cols = ['B', 'C', 'D'];
+    model.scenarioSummary.scenarios.forEach((s, i) => {
+      const col = cols[i];
+      assert.strictEqual(s.statePensionAge, model.personal.statePensionAge, `Scenario ${col} statePensionAge`);
+      assert.strictEqual(
+        s.statePensionIncludedFromClaimAge,
+        s.nhsClaimAge >= model.personal.statePensionAge,
+        `Scenario ${col} statePensionIncludedFromClaimAge`
+      );
+      if (s.statePensionIncludedFromClaimAge) {
+        approxEqual(s.totalIncomeFromStatePensionAge, s.totalIncomeFromClaimAge, `Scenario ${col} totalIncomeFromStatePensionAge (already included)`);
+      } else {
+        approxEqual(
+          s.totalIncomeFromStatePensionAge,
+          s.totalIncomeFromClaimAge + inputs.estimatedStatePensionAnnual,
+          `Scenario ${col} totalIncomeFromStatePensionAge (State Pension added on top)`
+        );
+      }
+    });
+  });
+
   t.test('Target Income Calculator', () => {
     const tic = gt['Target Income Calculator'];
     const targ = model.targetIncomeCalculator;

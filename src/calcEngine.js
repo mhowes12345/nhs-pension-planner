@@ -248,6 +248,15 @@ function calcScenarioForAge(inputs, personal, legacy, careYears, privateYears, r
   const totalIncomeFromClaimAge =
     (nhs2015AfterReduction ?? NaN) + legacyIncome.pension + statePension + (drawdown ?? NaN) + oldPensionsIncome;
 
+  // If the NHS pension is claimed before State Pension Age, totalIncomeFromClaimAge is a
+  // steady-state figure that never includes the State Pension (statePension is 0 above).
+  // In reality it starts once they reach SPA — model that as a third phase on top of the
+  // claim-age total, rather than silently excluding it from every year after SPA too.
+  const statePensionIncludedFromClaimAge = nhsClaimAge >= spa;
+  const totalIncomeFromStatePensionAge = statePensionIncludedFromClaimAge
+    ? totalIncomeFromClaimAge
+    : totalIncomeFromClaimAge + inputs.estimatedStatePensionAnnual;
+
   return {
     retirementAge,
     nhsClaimAge,
@@ -257,6 +266,9 @@ function calcScenarioForAge(inputs, personal, legacy, careYears, privateYears, r
     legacyPension: legacyIncome.pension,
     legacyLumpSum: legacyIncome.lumpSum,
     statePension,
+    statePensionAge: spa,
+    statePensionIncludedFromClaimAge,
+    totalIncomeFromStatePensionAge,
     privatePot,
     bridgeYears,
     bridgeIncome,

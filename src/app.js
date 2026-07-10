@@ -221,6 +221,8 @@ function renderScenarioCard(s, i, model, inputs) {
     ? `Scenario ${label} — retire ${s.retirementAge}, claim ${s.nhsClaimAge}`
     : `Scenario ${label} — Age ${s.retirementAge}`;
 
+  const getsStatePensionLater = !s.statePensionIncludedFromClaimAge && inputs.estimatedStatePensionAnnual > 0;
+
   return `
     <article class="scenario-card">
       <h3>${heading}</h3>
@@ -237,8 +239,12 @@ function renderScenarioCard(s, i, model, inputs) {
         ${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
       </table>
       ${s.reductionFactor < 1 ? `<p class="note">Early retirement reduction: ${pctFmt(1 - s.reductionFactor)} cut (${pctFmt(s.reductionFactor)} retained)</p>` : ''}
-      ${s.statePension === 0 && s.nhsClaimAge < model.personal.statePensionAge && inputs.estimatedStatePensionAnnual > 0
-        ? `<p class="note warn">State Pension not included — this scenario's claim age (${s.nhsClaimAge}) is before your State Pension Age (${model.personal.statePensionAge}).</p>` : ''}
+      ${getsStatePensionLater ? `
+        <div class="spa-callout">
+          <div class="spa-callout-label">Then, from State Pension Age ${s.statePensionAge}: + State Pension</div>
+          <div class="spa-callout-amount">+${money(inputs.estimatedStatePensionAnnual)}/yr <span>&rarr; ${money(s.totalIncomeFromStatePensionAge)}/yr total</span></div>
+        </div>
+      ` : ''}
       ${s.lumpSum ? `<p class="note">One-off tax-free lump sum: ${money(s.lumpSum)}</p>` : ''}
       <p class="note">Private pot at retirement: ${money(s.privatePot)}</p>
     </article>`;
