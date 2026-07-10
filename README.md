@@ -2,7 +2,7 @@
 
 A client-side retirement income calculator for NHS pension members, combining the legacy 1995/2008 Section, the 2015 CARE scheme, and private pensions/savings (SIPP, LISA, S&S ISA, AVC, GIA) into combined income projections at different retirement ages.
 
-Live app: https://mhowe1986.github.io/nhs-pension-planner/
+Live app: https://mhowes12345.github.io/nhs-pension-planner/
 
 **This is a projection tool, not financial advice.** Figures are based on the assumptions you enter — see the Assumptions & Sources section in the app for defaults and sources. Speak to a regulated financial adviser before making retirement decisions.
 
