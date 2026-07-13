@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NHS + Private Pension Retirement Modeller</title>
+<title>NHS &amp; Private Pension Retirement Modeller</title>
 <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
 <header class="app-header">
-  <h1>NHS + Private Pension Retirement Modeller</h1>
+  <h1>NHS &amp; Private Pension Retirement Modeller</h1>
   <p class="disclaimer">Projections based on the numbers and assumptions you enter. Not financial advice — speak to a regulated adviser before making retirement decisions.</p>
 </header>
 
@@ -16,7 +16,7 @@
   <form id="inputsForm" class="inputs-panel">
 
     <fieldset>
-      <legend>Personal</legend>
+      <div class="section-title">Personal</div>
       <label data-note="Used to calculate your current age and State Pension age automatically below">Date of birth
         <input type="date" name="dateOfBirth" value="1982-03-15" required>
       </label>
@@ -29,7 +29,7 @@
     </fieldset>
 
     <fieldset>
-      <legend>Scenarios — retirement ages to compare</legend>
+      <div class="section-title">Scenarios — retirement ages to compare</div>
       <p class="hint">'Retirement age' is when you stop working. 'NHS pension claim age' is a separate choice — when you actually start drawing your NHS pension. They default to the same age (claim immediately). Increase the claim age above the retirement age to model stopping work early but deferring your NHS pension, living off your private pots in the meantime.</p>
 
       <label data-note="e.g. Normal Minimum Pension Age">Scenario A — retirement age (stop working)
@@ -55,7 +55,7 @@
     </fieldset>
 
     <fieldset>
-      <legend>Target Retirement Income</legend>
+      <div class="section-title">Target Retirement Income</div>
       <label data-note="See the 'Target Income Calculator' results for what this implies you'd need to save extra, each year, from now">Target retirement income, annual, today's money (£)
         <input type="number" name="targetIncome" value="0" step="1" min="0">
       </label>
@@ -68,7 +68,7 @@
     </fieldset>
 
     <fieldset>
-      <legend>NHS Legacy Scheme (1995 / 2008 Section)</legend>
+      <div class="section-title">NHS Legacy Scheme (1995 / 2008 Section)</div>
       <p class="hint">Enter these straight from your TRS/ABS 'Standard Benefits' table.</p>
       <label data-note="From the 'Pension' row of your 1995 Section Annual Benefit Statement. Leave as 0 if not applicable">1995 Section — Pension (£/yr)
         <input type="number" name="legacy1995Pension" value="0" step="1" min="0">
@@ -94,7 +94,7 @@
     </fieldset>
 
     <fieldset>
-      <legend>NHS 2015 Scheme (CARE)</legend>
+      <div class="section-title">NHS 2015 Scheme (CARE)</div>
       <label data-note="Should already reflect McCloud remedy correction — see README">2015 CARE pot — most recent TRS/ABS value (£)
         <input type="number" name="carePotLastStatement" value="0" step="1" min="0" required>
       </label>
@@ -200,7 +200,7 @@
     </details>
 
     <fieldset>
-      <legend>Annual Allowance</legend>
+      <div class="section-title">Annual Allowance</div>
       <label data-note="2026/27 standard limit before any tapering">Standard Annual Allowance (£)
         <input type="number" name="standardAnnualAllowance" value="60000" step="1" min="0">
       </label>
@@ -216,7 +216,7 @@
     </fieldset>
 
     <fieldset>
-      <legend>Drawdown Strategy</legend>
+      <div class="section-title">Drawdown Strategy</div>
       <label data-note="'4% Safe Withdrawal' assumes the pot lasts indefinitely. 'Bridge' assumes you stop work at this scenario's age and deliberately spend your private pots down to zero by your State Pension Age, to give your NHS/State pensions longer to grow (or to avoid claiming your NHS pension early) — this gives a MUCH higher annual figure while it lasts, but nothing left over from these pots after that age. This only affects any pot left over once your NHS claim age is reached — if you're already bridging to a later claim age (see Scenarios below), the pot is spent down to zero getting you there regardless of this setting.">How will you draw your private pots?
         <select name="drawdownStrategy">
           <option value="4% Safe Withdrawal (perpetual)" selected>4% Safe Withdrawal (perpetual)</option>
@@ -226,7 +226,7 @@
     </fieldset>
 
     <fieldset>
-      <legend>Retirement Living Standards Comparison</legend>
+      <div class="section-title">Retirement Living Standards Comparison</div>
       <label data-note="Used to compare your projected income against PLSA/Pensions UK benchmarks">Household type
         <select name="householdType">
           <option value="One-person" selected>One-person</option>

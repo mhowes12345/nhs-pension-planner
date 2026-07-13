@@ -25,7 +25,7 @@ body {
   padding: 1.2rem 1.5rem;
   border-bottom: 1px solid var(--panel-border);
 }
-.app-header h1 { margin: 0 0 0.3rem; font-size: 1.3rem; }
+.app-header h1 { margin: 0 0 0.3rem; font-size: 1.3rem; color: var(--accent); }
 .disclaimer { margin: 0; color: var(--text-dim); font-size: 0.85rem; max-width: 60rem; }
 
 .app-layout {
@@ -103,13 +103,16 @@ fieldset {
   background: var(--panel);
   padding: 0.8rem 1rem 1rem;
 }
-legend {
-  padding: 0 0.4rem;
+/* A native <legend> straddles the fieldset's top border by default (half in, half out) --
+   using a plain div inside the fieldset instead keeps the title fully inside the box,
+   consistent with the collapsible sections' <summary> titles below. */
+.section-title {
   font-weight: 600;
   font-size: 0.85rem;
   color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  margin-bottom: 0.6rem;
 }
 
 /* Collapsible input sections — same visual container as fieldset, but the title is a
