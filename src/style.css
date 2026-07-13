@@ -1,14 +1,15 @@
 :root {
-  --bg: #f4f5f7;
+  /* NHS blue palette */
+  --bg: #f0f4f8;
   --panel: #ffffff;
-  --panel-border: #dde1e6;
-  --text: #1a1d23;
-  --text-dim: #5b6472;
-  --accent: #2f6fe0;
-  --ok: #1f9d5c;
-  --warn: #b8720a;
-  --below: #d92d2d;
-  --input-bg: #f7f8fa;
+  --panel-border: #d8e1e8;
+  --text: #1a2733;
+  --text-dim: #55697a;
+  --accent: #005eb8;
+  --ok: #007f3b;
+  --warn: #ed8b00;
+  --below: #da291c;
+  --input-bg: #f4f8fb;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
