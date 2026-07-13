@@ -111,6 +111,46 @@ legend {
   letter-spacing: 0.03em;
 }
 
+/* Collapsible input sections — same visual container as fieldset, but the title is a
+   clickable <summary> instead of a <legend>. */
+details.input-section {
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 0.8rem 1rem 1rem;
+}
+details.input-section summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  list-style: none;
+  margin: -0.2rem -0.2rem 0.6rem;
+  padding: 0.2rem;
+  border-radius: 4px;
+}
+details.input-section summary::-webkit-details-marker {
+  display: none;
+}
+details.input-section summary::before {
+  content: '▸';
+  display: inline-block;
+  width: 1em;
+  margin-right: 0.2rem;
+  transition: transform 0.15s ease;
+}
+details.input-section[open] summary::before {
+  transform: rotate(90deg);
+}
+details.input-section summary:hover {
+  background: rgba(79,157,255,0.08);
+}
+details.input-section:not([open]) summary {
+  margin-bottom: 0;
+}
+
 .hint {
   margin: 0 0 0.5rem;
   font-size: 0.78rem;
