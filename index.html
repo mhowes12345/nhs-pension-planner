@@ -115,7 +115,7 @@
       </label>
     </fieldset>
 
-    <details class="input-section" open>
+    <details class="input-section">
       <summary>NHS Additional Pension (AP) &amp; AVCs</summary>
       <label data-note="Extra GUARANTEED annual NHS pension you've bought (up to ~£8,946/yr for 2026/27). Leave as 0 if you haven't bought any. This adds directly to your NHS income and is subject to the same early retirement reduction as your main 2015 Scheme pension (see ERRBO section below).">Additional Pension (AP) purchased — annual amount (£)
         <input type="number" name="apPurchasedAnnual" value="0" step="1" min="0">
@@ -131,7 +131,7 @@
       </label>
     </details>
 
-    <details class="input-section" open>
+    <details class="input-section">
       <summary>Early Retirement &amp; ERRBO</summary>
       <label data-note="Early Retirement Reduction Buy Out: lets 2015 Scheme members buy out some/all of the reduction for retiring before their Normal Pension Age. Enter how many years you've bought out (0 if none). This offsets the reduction applied for Scenarios claiming before your Normal Pension Age/State Pension Age.">ERRBO — years of reduction bought out
         <input type="number" name="errboYearsBoughtOut" value="0" step="1" min="0">
@@ -141,7 +141,7 @@
       </label>
     </details>
 
-    <details class="input-section" open>
+    <details class="input-section">
       <summary>Private Pensions &amp; Savings</summary>
       <label>SIPP current balance (£)
         <input type="number" name="sippBalance" value="0" step="1" min="0">
@@ -172,7 +172,7 @@
       </label>
     </details>
 
-    <details class="input-section" open>
+    <details class="input-section">
       <summary>General Investment Account (GIA)</summary>
       <label data-note="Taxable investments held outside a pension or ISA — e.g. once you're maxing your £20,000 ISA allowance. Leave as 0 if not applicable.">GIA current balance (£)
         <input type="number" name="giaBalance" value="0" step="1" min="0">
@@ -193,7 +193,7 @@
       </label>
     </details>
 
-    <details class="input-section" id="oldPensionsFieldset" open>
+    <details class="input-section" id="oldPensionsFieldset">
       <summary>Old / Frozen Pensions</summary>
       <p class="hint">Add up to 3 pensions from before the NHS (or other past employers).</p>
       <!-- old pension rows injected by app.js -->

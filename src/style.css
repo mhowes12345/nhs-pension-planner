@@ -1,13 +1,14 @@
 :root {
-  --bg: #0f1216;
-  --panel: #171b21;
-  --panel-border: #2a2f38;
-  --text: #e6e9ee;
-  --text-dim: #9aa4b2;
-  --accent: #4f9dff;
-  --ok: #4fd18b;
-  --warn: #ffb84f;
-  --below: #ff6b6b;
+  --bg: #f4f5f7;
+  --panel: #ffffff;
+  --panel-border: #dde1e6;
+  --text: #1a1d23;
+  --text-dim: #5b6472;
+  --accent: #2f6fe0;
+  --ok: #1f9d5c;
+  --warn: #b8720a;
+  --below: #d92d2d;
+  --input-bg: #f7f8fa;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -170,7 +171,7 @@ input, select {
   width: 100%;
   margin-top: 0.2rem;
   padding: 0.4rem 0.5rem;
-  background: #0d1014;
+  background: var(--input-bg);
   border: 1px solid var(--panel-border);
   border-radius: 5px;
   color: var(--text);
@@ -192,14 +193,14 @@ label[data-note] {
   position: fixed;
   z-index: 100;
   max-width: 22rem;
-  background: #1c222b;
+  background: var(--panel);
   color: var(--text);
   border: 1px solid var(--panel-border);
   border-radius: 6px;
   padding: 0.6rem 0.75rem;
   font-size: 0.78rem;
   line-height: 1.4;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
   pointer-events: none;
 }
 
@@ -312,7 +313,8 @@ label[data-note] {
   padding: 0.15rem 0.55rem;
   border-radius: 999px;
   margin-bottom: 0.7rem;
-  background: #333;
+  background: var(--input-bg);
+  color: var(--text-dim);
 }
 .badge-below { background: rgba(255,107,107,0.18); color: var(--below); }
 .badge-minimum { background: rgba(255,184,79,0.18); color: var(--warn); }
