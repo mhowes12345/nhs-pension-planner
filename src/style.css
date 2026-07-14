@@ -25,9 +25,35 @@ body {
 .app-header {
   padding: 1.2rem 1.5rem;
   border-bottom: 1px solid var(--panel-border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
+.app-header-text { flex: 1; min-width: 0; }
 .app-header h1 { margin: 0 0 0.3rem; font-size: 1.3rem; color: var(--accent); }
 .disclaimer { margin: 0; color: var(--text-dim); font-size: 0.85rem; max-width: 60rem; }
+
+.kofi-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  background: var(--panel);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.kofi-button:hover {
+  background: var(--accent);
+  color: var(--panel);
+}
 
 .app-layout {
   display: grid;
