@@ -55,6 +55,12 @@ body {
   color: var(--panel);
 }
 
+.app-footer {
+  padding: 1.5rem;
+  text-align: center;
+  border-top: 1px solid var(--panel-border);
+}
+
 .app-layout {
   display: grid;
   grid-template-columns: 22rem 1fr;
@@ -85,6 +91,14 @@ body {
     max-height: none;
     overflow-y: visible;
     position: static;
+  }
+
+  /* Header and button fight for horizontal space on narrow screens and squeeze the
+     title — stack them instead, button on top (it's second in the DOM, so reversing
+     the column order puts it first without needing to reorder the markup). */
+  .app-header {
+    flex-direction: column-reverse;
+    align-items: flex-start;
   }
 
   /* Reference tables (Retirement Living Standards / Glossary / Assumptions) switch from
