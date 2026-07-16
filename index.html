@@ -15,6 +15,8 @@
   <a class="kofi-button" href="https://ko-fi.com/mikkyh" target="_blank" rel="noopener noreferrer">&#9749; Buy me a coffee</a>
 </header>
 
+<div id="guidedHeadlineBar" class="guided-headline-bar" aria-live="polite"></div>
+
 <div class="app-layout">
   <form id="inputsForm" class="inputs-panel">
 
@@ -36,7 +38,7 @@
       </label>
     </fieldset>
 
-    <fieldset>
+    <fieldset id="scenariosFieldset">
       <div class="section-title">Scenarios — retirement ages to compare</div>
       <p class="hint">'Retirement age' is when you stop working. 'NHS pension claim age' is a separate choice — when you actually start drawing your NHS pension. They default to the same age (claim immediately). Increase the claim age above the retirement age to model stopping work early but deferring your NHS pension, living off your private pots in the meantime.</p>
 
@@ -242,6 +244,8 @@
         </select>
       </label>
     </fieldset>
+
+    <div id="guidedWizard" class="guided-wizard"></div>
 
   </form>
 

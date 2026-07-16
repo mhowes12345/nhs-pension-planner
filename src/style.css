@@ -101,6 +101,7 @@ body {
     align-items: flex-start;
   }
 
+
   /* Reference tables (Retirement Living Standards / Glossary / Assumptions) switch from
      a horizontally-scrolling table to a stacked term/definition layout — a wide nowrap
      first column reading sideways is awkward on a phone. */
@@ -158,6 +159,19 @@ body {
   color: var(--panel);
 }
 
+/* Sticky bar wrapping the guided headline — pinned to the viewport top so the
+   number stays visible (and visibly updates) while the user works through the
+   wizard, which is the §2 "results update live" motivator. */
+.guided-headline-bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--bg);
+  padding: 0.6rem 1rem 0.4rem;
+  border-bottom: 1px solid var(--panel-border);
+}
+.guided-headline-bar:empty { display: none; }
+
 .headline-panel {
   display: flex;
   flex-wrap: wrap;
@@ -165,7 +179,9 @@ body {
   background: var(--panel);
   border: 1px solid var(--panel-border);
   border-radius: 10px;
-  padding: 1.4rem 1.2rem;
+  padding: 0.7rem 1.2rem;
+  max-width: 60rem;
+  margin: 0 auto;
 }
 .headline-item {
   flex: 1;
@@ -177,18 +193,155 @@ body {
   margin-bottom: 0.3rem;
 }
 .headline-amount {
-  font-size: 2.2rem;
+  font-size: 1.7rem;
   font-weight: 700;
   color: var(--accent);
 }
 .headline-amount span {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 400;
   color: var(--text-dim);
   margin-left: 0.25rem;
 }
 .headline-note {
-  margin-top: 0.6rem;
+  margin: 0.35rem auto 0;
+  max-width: 60rem;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+.headline-caveat {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+/* The sticky headline bar must stay compact on a phone — at full size the two
+   stacked items eat a quarter of the screen. Force them side by side and shrink.
+   NB: this block must come AFTER the .headline-* base rules above — the main
+   @media (max-width: 900px) block earlier in the file would lose the specificity
+   tie to them. */
+@media (max-width: 900px) {
+  .guided-headline-bar { padding: 0.4rem 0.6rem 0.3rem; }
+  .headline-panel {
+    gap: 0.6rem;
+    padding: 0.5rem 0.7rem;
+    flex-wrap: nowrap;
+  }
+  .headline-item { min-width: 0; }
+  .headline-age { font-size: 0.72rem; margin-bottom: 0.1rem; }
+  .headline-amount { font-size: 1.15rem; }
+  .headline-amount span { font-size: 0.72rem; }
+  .headline-note { font-size: 0.68rem; margin-top: 0.25rem; }
+}
+
+/* Guided wizard card */
+.wizard-card {
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 1rem 1.1rem;
+}
+.wizard-progress {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-dim);
+  margin-bottom: 0.4rem;
+}
+.wizard-question {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.wizard-help {
+  margin: 0 0 0.7rem;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+.wizard-answers {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.7rem;
+}
+.wizard-answer {
+  flex: 1;
+  min-width: 5rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wizard-answer:hover { border-color: var(--accent); }
+.wizard-answer.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--panel);
+}
+.wizard-notsure-explainer {
+  margin: 0 0 0.7rem;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.78rem;
+  color: var(--text);
+  background: rgba(237,139,0,0.08);
+  border: 1px solid rgba(237,139,0,0.3);
+  border-radius: 8px;
+}
+.wizard-reveal-note {
+  margin: 0 0 0.7rem;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ok);
+  background: rgba(0,127,59,0.07);
+  border: 1px solid rgba(0,127,59,0.25);
+  border-radius: 8px;
+}
+.wizard-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.wizard-btn {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wizard-btn:disabled {
+  border-color: var(--panel-border);
+  color: var(--text-dim);
+  cursor: default;
+}
+.wizard-next {
+  background: var(--accent);
+  color: var(--panel);
+}
+.wizard-skip-all {
+  display: block;
+  width: 100%;
+  padding: 0.35rem;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.wizard-skip-all:hover { color: var(--accent); }
+.wizard-done-msg {
+  margin: 0 0 0.7rem;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 fieldset {

@@ -103,11 +103,11 @@ try {
   // storage unavailable — default to guided
 }
 
-// A fieldset/details block that contains ONLY quick-start fields is left alone in
-// guided mode (it doesn't exist yet, but would show in full); one that contains a
-// MIX (e.g. "Personal" also has tax-year/State-Pension fields) stays visible with
-// just its non-quick-start labels hidden; one with NO quick-start fields is hidden
-// entirely. Fully data-driven off the field-name list above — no HTML markup needed.
+// A fieldset/details block that contains ONLY quick-start/wizard-revealed fields is
+// left alone in guided mode; one that contains a MIX (e.g. "Personal" also has tax-
+// year/State-Pension fields) stays visible with just its non-relevant labels hidden;
+// one with NO relevant fields is hidden entirely. guidedRevealedFields/Containers are
+// populated by the wizard below, based on the user's answers so far.
 function applyGuidedVisibility() {
   const guided = currentMode === 'guided';
   form.querySelectorAll('fieldset, details.input-section').forEach((container) => {
@@ -117,17 +117,22 @@ function applyGuidedVisibility() {
       labels.forEach((l) => { l.style.display = ''; });
       return;
     }
-    const isQuickstartLabel = (l) => {
+    if (guidedRevealedContainers.has(container.id)) {
+      container.style.display = '';
+      labels.forEach((l) => { l.style.display = ''; });
+      return;
+    }
+    const isVisibleLabel = (l) => {
       const input = l.querySelector('[name]');
-      return input && GUIDED_QUICKSTART_FIELDS.includes(input.name);
+      return input && (GUIDED_QUICKSTART_FIELDS.includes(input.name) || guidedRevealedFields.has(input.name));
     };
-    const hasQuickstartField = labels.some(isQuickstartLabel);
-    if (!hasQuickstartField) {
+    const hasVisibleField = labels.some(isVisibleLabel);
+    if (!hasVisibleField) {
       container.style.display = 'none';
       return;
     }
     container.style.display = '';
-    labels.forEach((l) => { l.style.display = isQuickstartLabel(l) ? '' : 'none'; });
+    labels.forEach((l) => { l.style.display = isVisibleLabel(l) ? '' : 'none'; });
   });
 }
 
@@ -147,6 +152,244 @@ document.querySelectorAll('.mode-toggle-btn').forEach((btn) => {
   const active = btn.dataset.mode === currentMode;
   btn.classList.toggle('active', active);
   btn.setAttribute('aria-pressed', String(active));
+});
+
+// ---- guided wizard (progressive disclosure, §2 of the rework brief) ---------
+// One plain-English question at a time, Next/Back, each defaulting to the most
+// common answer (No). Answering Yes reveals the relevant fields IN PLACE in their
+// original fieldsets — fields are never duplicated or moved, since a second input
+// with the same name would break form.elements[name] lookups. "Not sure" is offered
+// where a GP plausibly wouldn't know; it defaults safely (like No) but shows an
+// explainer and flags the headline as possibly incomplete.
+
+const WIZARD_KEY = 'nhsPensionPlanner:wizard';
+
+const WIZARD_STEPS = [
+  {
+    id: 'legacy',
+    question: 'Do you have NHS service from before 2015?',
+    help: 'If you were in the NHS pension scheme before April 2015, you’ll also have benefits in the older 1995 or 2008 Section — usually worth a lot, so it’s worth digging out.',
+    notSure: true,
+    notSureExplainer: 'Your Total Reward Statement (TRS) will show a “1995 Section” or “2008 Section” block if you have one — log in at totalrewardstatements.nhs.uk. For now we’ll assume you don’t, which may understate your pension.',
+    revealFields: ['legacy1995Pension', 'legacy1995LumpSum', 'legacy2008Pension', 'legacy2008LumpSum'],
+  },
+  {
+    id: 'serviceBreak',
+    question: 'Have you had a break in NHS service of 5 years or more?',
+    help: 'A 5+ year break stops your older (1995/2008) benefits growing with your career — they’re frozen in real terms instead.',
+    notSure: true,
+    notSureExplainer: 'If you’re not certain, we’ll assume no break — that’s the common case for most careers. A 5+ year gap would make this projection slightly optimistic about your older benefits.',
+    revealFields: [],
+    onlyIf: (answers) => answers.legacy === 'yes',
+    applyAnswer: (answer) => {
+      // This one maps directly onto an existing form field rather than just revealing
+      // fields: continuous service = no 5+ year break.
+      form.elements.legacyContinuousService.value = answer === 'yes' ? 'No' : 'Yes';
+    },
+  },
+  {
+    id: 'private',
+    question: 'Do you pay into a private pension or ISA?',
+    help: 'A SIPP, workplace pension outside the NHS, Lifetime ISA, or Stocks & Shares ISA — anything you’re saving for retirement beyond the NHS scheme.',
+    notSure: false,
+    revealFields: ['sippBalance', 'sippContribution', 'sippGrowthRate', 'lisaBalance', 'lisaContribution', 'lisaGrowthRate', 'isaBalance', 'isaContribution', 'isaGrowthRate'],
+  },
+  {
+    id: 'apAvc',
+    question: 'Have you bought Additional Pension or paid NHS AVCs?',
+    help: 'Additional Pension (AP) is extra guaranteed NHS pension you can buy. AVCs are an invested top-up run alongside the NHS scheme. Most people haven’t — if this doesn’t ring a bell, it’s a No.',
+    notSure: true,
+    notSureExplainer: 'These only exist if you actively signed up and pay for them — they’d show on your payslip as a separate deduction. We’ll assume not.',
+    revealFields: ['apPurchasedAnnual', 'avcBalance', 'avcContribution', 'avcGrowthRate'],
+  },
+  {
+    id: 'errbo',
+    question: 'Have you bought out any early retirement reduction (ERRBO)?',
+    help: 'An ERRBO agreement means you pay extra so you can retire before your Normal Pension Age with less (or no) reduction. Like AP, you’d know — it’s a deliberate signup with a payslip deduction.',
+    notSure: true,
+    notSureExplainer: 'ERRBO only exists if you signed up for it — we’ll assume not.',
+    revealFields: ['errboYearsBoughtOut', 'earlyRetirementReductionRate'],
+  },
+  {
+    id: 'oldPensions',
+    question: 'Do you have pensions from before the NHS?',
+    help: 'Old workplace pensions from previous jobs — “frozen” or “deferred” pensions you no longer pay into but that will still pay out.',
+    notSure: true,
+    notSureExplainer: 'You can check old paperwork or use gov.uk’s Pension Tracing Service. We’ll leave them out for now, which may understate your income.',
+    revealContainers: ['oldPensionsFieldset'],
+  },
+  {
+    id: 'highEarner',
+    question: 'Do you earn over £200,000 a year?',
+    help: 'Above roughly this level, a lower “tapered” Annual Allowance can apply to your pension savings and trigger tax charges.',
+    notSure: false,
+    revealFields: ['isHighEarner', 'adjustedIncome', 'standardAnnualAllowance'],
+    applyAnswer: (answer) => {
+      form.elements.isHighEarner.value = answer === 'yes' ? 'Yes' : 'No';
+    },
+  },
+  {
+    id: 'compareAges',
+    question: 'Do you want to compare stopping work at different ages?',
+    help: 'See side-by-side what retiring at, say, 57 vs 60 vs 67 would mean — including stopping work early but claiming your NHS pension later, with private savings bridging the gap.',
+    notSure: false,
+    revealContainers: ['scenariosFieldset'],
+    revealFields: ['drawdownStrategy'],
+  },
+];
+
+// answers: stepId -> 'yes' | 'no' | 'notsure' (absent = unanswered)
+let wizardState = { step: 0, answers: {} };
+try {
+  const raw = localStorage.getItem(WIZARD_KEY);
+  if (raw) {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.step === 'number' && parsed.answers) wizardState = parsed;
+  }
+} catch (e) {
+  // corrupt/unavailable — start fresh
+}
+
+function saveWizardState() {
+  try { localStorage.setItem(WIZARD_KEY, JSON.stringify(wizardState)); } catch (e) {}
+}
+
+// Steps whose onlyIf gate fails are skipped entirely (never shown, reveal nothing).
+function activeWizardSteps() {
+  return WIZARD_STEPS.filter((s) => !s.onlyIf || s.onlyIf(wizardState.answers));
+}
+
+const guidedRevealedFields = new Set();
+const guidedRevealedContainers = new Set();
+
+function recomputeRevealed() {
+  guidedRevealedFields.clear();
+  guidedRevealedContainers.clear();
+  activeWizardSteps().forEach((step) => {
+    if (wizardState.answers[step.id] !== 'yes') return;
+    (step.revealFields || []).forEach((f) => guidedRevealedFields.add(f));
+    (step.revealContainers || []).forEach((c) => guidedRevealedContainers.add(c));
+  });
+}
+
+function anyNotSure() {
+  return activeWizardSteps().some((s) => wizardState.answers[s.id] === 'notsure');
+}
+
+function resetFieldToDefault(el) {
+  if (el.tagName === 'SELECT') {
+    const def = Array.from(el.options).find((o) => o.defaultSelected) || el.options[0];
+    if (def) el.value = def.value;
+  } else {
+    el.value = el.defaultValue;
+  }
+}
+
+function answerWizardStep(stepId, answer) {
+  const prev = wizardState.answers[stepId];
+  wizardState.answers[stepId] = answer;
+  const step = WIZARD_STEPS.find((s) => s.id === stepId);
+  // Downgrading from Yes hides the step's fields again — reset them to their HTML
+  // defaults too, otherwise values typed while they were visible would silently keep
+  // feeding the projection ("never reveal a field the user's answers make irrelevant"
+  // has to mean the values stop counting as well, not just the inputs disappearing).
+  if (prev === 'yes' && answer !== 'yes' && step) {
+    (step.revealFields || []).forEach((name) => {
+      const el = form.elements[name];
+      if (el) resetFieldToDefault(el);
+    });
+    (step.revealContainers || []).forEach((id) => {
+      const container = document.getElementById(id);
+      if (container) container.querySelectorAll('input, select').forEach(resetFieldToDefault);
+    });
+  }
+  if (step && step.applyAnswer) step.applyAnswer(answer);
+  saveWizardState();
+}
+
+function renderWizard() {
+  const wizardEl = document.getElementById('guidedWizard');
+  if (currentMode !== 'guided') {
+    wizardEl.innerHTML = '';
+    return;
+  }
+
+  const steps = activeWizardSteps();
+  const idx = Math.min(wizardState.step, steps.length);
+  const done = idx >= steps.length;
+
+  if (done) {
+    const answeredCount = steps.filter((s) => wizardState.answers[s.id]).length;
+    wizardEl.innerHTML = `
+      <div class="wizard-card wizard-done">
+        <p class="wizard-done-msg">That's everything — your projection above reflects all ${answeredCount} answers.</p>
+        <div class="wizard-nav">
+          <button type="button" class="wizard-btn wizard-back" data-wizard-nav="back">&larr; Back</button>
+          <button type="button" class="wizard-btn wizard-restart" data-wizard-nav="restart">Start again</button>
+        </div>
+        <p class="hint">Want full control of every number? Switch to <strong>Advanced (full form)</strong> at the top.</p>
+      </div>`;
+    return;
+  }
+
+  const step = steps[idx];
+  const current = wizardState.answers[step.id];
+  const showNotSureExplainer = current === 'notsure' && step.notSureExplainer;
+  const answered = Boolean(current);
+  const revealed = current === 'yes' && ((step.revealFields || []).length > 0 || (step.revealContainers || []).length > 0);
+
+  const answerBtn = (value, label) => `
+    <button type="button" class="wizard-answer ${current === value ? 'selected' : ''}" data-wizard-answer="${value}">${label}</button>`;
+
+  wizardEl.innerHTML = `
+    <div class="wizard-card">
+      <div class="wizard-progress">Question ${idx + 1} of ${steps.length}</div>
+      <p class="wizard-question">${step.question}</p>
+      <p class="wizard-help">${step.help}</p>
+      <div class="wizard-answers">
+        ${answerBtn('yes', 'Yes')}
+        ${answerBtn('no', 'No')}
+        ${step.notSure ? answerBtn('notsure', 'Not sure') : ''}
+      </div>
+      ${showNotSureExplainer ? `<p class="wizard-notsure-explainer">${step.notSureExplainer}</p>` : ''}
+      ${revealed ? `<p class="wizard-reveal-note">New fields have appeared above — fill them in, then carry on.</p>` : ''}
+      <div class="wizard-nav">
+        <button type="button" class="wizard-btn wizard-back" data-wizard-nav="back" ${idx === 0 ? 'disabled' : ''}>&larr; Back</button>
+        <button type="button" class="wizard-btn wizard-next" data-wizard-nav="next">${answered ? 'Next &rarr;' : 'Skip &rarr;'}</button>
+      </div>
+      <button type="button" class="wizard-skip-all" data-wizard-nav="finish">I'm done — show my results</button>
+    </div>`;
+}
+
+document.getElementById('guidedWizard').addEventListener('click', (e) => {
+  const answerBtn = e.target.closest('[data-wizard-answer]');
+  if (answerBtn) {
+    const steps = activeWizardSteps();
+    const step = steps[Math.min(wizardState.step, steps.length - 1)];
+    answerWizardStep(step.id, answerBtn.dataset.wizardAnswer);
+    update();
+    return;
+  }
+  const navBtn = e.target.closest('[data-wizard-nav]');
+  if (!navBtn) return;
+  const nav = navBtn.dataset.wizardNav;
+  if (nav === 'back') {
+    wizardState.step = Math.max(0, wizardState.step - 1);
+  } else if (nav === 'next') {
+    // An unanswered question skipped with Next defaults to the most common answer: No.
+    const steps = activeWizardSteps();
+    const step = steps[wizardState.step];
+    if (step && !wizardState.answers[step.id]) answerWizardStep(step.id, 'no');
+    wizardState.step += 1;
+  } else if (nav === 'finish') {
+    wizardState.step = activeWizardSteps().length;
+  } else if (nav === 'restart') {
+    wizardState = { step: 0, answers: {} };
+    form.elements.legacyContinuousService.value = 'Yes';
+    form.elements.isHighEarner.value = 'No';
+  }
+  saveWizardState();
+  update();
 });
 
 // ---- read form -> inputs object matching calcEngine schema ----------------
@@ -700,25 +943,44 @@ function renderAdvancedResults(model, inputs) {
 
 // Headline: two derived ages, income if you stop work and claim NHS pension at the
 // same age. No scenario comparison, no tables — see §6 of the guided-rework brief:
-// "lead with the headline number(s), not a table."
-function renderHeadline(headlineModel) {
+// "lead with the headline number(s), not a table." Lives in its own sticky bar
+// (#guidedHeadlineBar, outside the two-column layout) rather than inside #results,
+// so it stays pinned above the wizard as the user scrolls through it — on mobile in
+// particular, the input/results columns stack and neither is otherwise sticky.
+function renderGuidedHeadlineBar(headlineModel) {
+  const bar = document.getElementById('guidedHeadlineBar');
+  if (currentMode !== 'guided') {
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = '';
   const [s1, s2] = headlineModel.scenarioSummary.scenarios;
   const item = (s) => `
     <div class="headline-item">
       <div class="headline-age">From age ${s.retirementAge}</div>
       <div class="headline-amount">${money(s.totalIncomeFromClaimAge)}<span>/yr</span></div>
     </div>`;
-  return `
+  const caveat = anyNotSure()
+    ? `<p class="headline-note headline-caveat">This may be incomplete — you answered "Not sure" to something that could change it. Come back and update it once you know.</p>`
+    : `<p class="headline-note">In today's money, based on what you've told us so far.</p>`;
+  bar.innerHTML = `
     <section class="headline-panel">
       ${item(s1)}
       ${item(s2)}
     </section>
-    <p class="hint headline-note">In today's money, based on what you've told us so far — this gets more accurate as you answer a few more questions.</p>`;
+    ${caveat}`;
 }
 
-function renderGuidedResults(model, headlineModel, inputs) {
+function renderGuidedResults(model, inputs) {
+  // Scenario comparison only appears once the user has asked for it via the wizard
+  // (§6: "Show scenario comparison only when the user has asked for it").
+  const wantsComparison = wizardState.answers.compareAges === 'yes';
+  const scenarioCards = wantsComparison
+    ? `<section class="scenario-grid">${model.scenarioSummary.scenarios
+        .map((s, i) => renderScenarioCard(s, i, model, inputs)).join('')}</section>`
+    : '';
   resultsEl.innerHTML = `
-    ${renderHeadline(headlineModel)}
+    ${scenarioCards}
     ${renderAssumptionsUsedPanel(inputs, model)}
     ${renderTargetIncome(model.targetIncomeCalculator)}
     ${renderRetirementLivingStandardsPanel(model)}
@@ -728,8 +990,9 @@ function renderGuidedResults(model, headlineModel, inputs) {
 }
 
 function render(model, headlineModel, inputs) {
+  renderGuidedHeadlineBar(headlineModel);
   if (currentMode === 'guided') {
-    renderGuidedResults(model, headlineModel, inputs);
+    renderGuidedResults(model, inputs);
   } else {
     renderAdvancedResults(model, inputs);
   }
@@ -785,11 +1048,14 @@ form.addEventListener('focusout', () => hideTooltip());
 // ---- update loop --------------------------------------------------------------
 
 function update() {
-  // Order matters: guided-mode visibility hides/shows whole fieldsets first, then
-  // conditional-field visibility (DB/DC subfields etc.) refines within whatever is
-  // currently shown — reversed, advanced mode's reset would clobber the conditionals.
+  // Order matters: wizard answers determine which fields are revealed, guided-mode
+  // visibility then hides/shows whole fieldsets, and conditional-field visibility
+  // (DB/DC subfields etc.) refines within whatever is currently shown — reversed,
+  // advanced mode's reset would clobber the conditionals.
+  recomputeRevealed();
   applyGuidedVisibility();
   refreshConditionalFields();
+  renderWizard();
   const inputs = readInputs();
   const model = CalcEngine.runModel(inputs, new Date());
   const headlineModel = currentMode === 'guided' ? buildHeadlineModel(inputs, model) : null;
