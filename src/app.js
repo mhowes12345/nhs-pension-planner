@@ -193,6 +193,12 @@ function pctFmt(v) {
   if (v === null || v === undefined || Number.isNaN(v)) return 'n/a';
   return `${(v * 100).toFixed(0)}%`;
 }
+// 1 decimal place, unlike pctFmt above — used where the precise assumption value
+// matters (e.g. 4.5% growth would otherwise round to a misleading "5%").
+function pctFmtPrecise(v) {
+  if (v === null || v === undefined || Number.isNaN(v)) return 'n/a';
+  return `${(v * 100).toFixed(1)}%`;
+}
 
 const STANDARD_BADGE_CLASS = {
   'Below Minimum': 'badge-below',
@@ -440,6 +446,126 @@ function renderAssumptionsPanel() {
     </article>`;
 }
 
+// ---- Assumptions used (transparency panel) ----------------------------------
+// Unlike the static Assumptions & Sources reference panel below (which lists every
+// assumption in the model verbatim, regardless of relevance), this one only surfaces
+// the assumptions currently governing THIS user's numbers — gated on what they've
+// actually disclosed — so it stays short rather than dumping all 11 rows on someone
+// who, say, has no GIA.
+
+const ASSUMPTIONS_USED = [
+  {
+    key: 'legacyRealGrowthRate',
+    label: 'How fast your 1995/2008 Section pension grows above inflation until you claim it',
+    rationale: 'GPs keep a "dynamised income" link (CPI + 1.5%, with a 1.5% floor) as long as there’s no 5+ year break in NHS pensionable service; in today’s-money terms that’s +1.5% real.',
+    relevantWhen: (inputs) => inputs.legacy1995Pension > 0 || inputs.legacy1995LumpSum > 0 || inputs.legacy2008Pension > 0 || inputs.legacy2008LumpSum > 0,
+    format: (inputs) => pctFmtPrecise(inputs.legacyRealGrowthRate),
+  },
+  {
+    key: 'payRealGrowthRate',
+    label: 'How much your NHS pay is assumed to grow above inflation',
+    rationale: 'Nominal pay awards have varied 2-6%, but much of that just tracks inflation — this uses a conservative real-terms planning assumption, not a forecast.',
+    relevantWhen: () => true,
+    format: (inputs) => pctFmtPrecise(inputs.payRealGrowthRate),
+  },
+  {
+    key: 'careRevaluationRealRate',
+    label: 'How fast your 2015 Scheme (CARE) pot grows above inflation',
+    rationale: 'The scheme rule is CPI + 1.5% nominal — since everything here is shown in today’s money, only the +1.5% real element is applied.',
+    relevantWhen: () => true,
+    format: (inputs) => pctFmtPrecise(inputs.careRevaluationRealRate),
+  },
+  {
+    key: 'careAccrualRateDenominator',
+    label: '2015 Scheme build-up rate',
+    rationale: 'Standard NHS 2015 Scheme accrual — you build up this fraction of that year’s pay as pension, each year.',
+    relevantWhen: () => true,
+    format: (inputs) => `1/${inputs.careAccrualRateDenominator}`,
+  },
+  {
+    key: 'earlyRetirementReductionRate',
+    label: 'Reduction applied for claiming before your Normal Pension Age',
+    rationale: 'Illustrative flat rate — NHSBSA’s real reduction factors are non-linear. Any ERRBO years you’ve bought out reduce this automatically.',
+    relevantWhen: (inputs, model) => model.scenarioSummary.scenarios.some((s) => s.reductionFactor < 1),
+    format: (inputs) => pctFmtPrecise(inputs.earlyRetirementReductionRate),
+  },
+  {
+    key: 'sippGrowthRate',
+    label: 'SIPP growth above inflation',
+    rationale: 'Illustrative return net of charges, for a diversified (not 100% equity) portfolio — see Assumptions & Sources below for the historical reasoning.',
+    relevantWhen: (inputs) => inputs.sippBalance > 0 || inputs.sippContribution > 0,
+    format: (inputs) => pctFmtPrecise(inputs.sippGrowthRate),
+  },
+  {
+    key: 'lisaGrowthRate',
+    label: 'LISA growth above inflation',
+    rationale: 'Illustrative return net of charges, for a diversified (not 100% equity) portfolio — see Assumptions & Sources below for the historical reasoning.',
+    relevantWhen: (inputs) => inputs.lisaBalance > 0 || inputs.lisaContribution > 0,
+    format: (inputs) => pctFmtPrecise(inputs.lisaGrowthRate),
+  },
+  {
+    key: 'isaGrowthRate',
+    label: 'S&S ISA growth above inflation',
+    rationale: 'Illustrative return net of charges, for a diversified (not 100% equity) portfolio — see Assumptions & Sources below for the historical reasoning.',
+    relevantWhen: (inputs) => inputs.isaBalance > 0 || inputs.isaContribution > 0,
+    format: (inputs) => pctFmtPrecise(inputs.isaGrowthRate),
+  },
+  {
+    key: 'giaGrowthRateGross',
+    label: 'GIA growth above inflation, and tax drag',
+    rationale: 'Growth is pre-tax; a tax drag is then deducted based on your marginal tax band, to approximate the ongoing cost of holding investments outside a pension/ISA.',
+    relevantWhen: (inputs) => inputs.giaBalance > 0 || inputs.giaContribution > 0,
+    format: (inputs) => `${pctFmtPrecise(inputs.giaGrowthRateGross)} gross, ${pctFmtPrecise(inputs.giaTaxDrag)} tax drag`,
+  },
+  {
+    key: 'standardAnnualAllowance',
+    label: 'Standard Annual Allowance',
+    rationale: 'The most you can pay into pensions each year, across all schemes, before a tax charge applies.',
+    relevantWhen: () => true,
+    format: (inputs) => money(inputs.standardAnnualAllowance),
+  },
+  {
+    key: 'estimatedStatePensionAnnual',
+    label: 'Estimated State Pension',
+    rationale: 'Defaulted to the full new State Pension rate — gaps in your National Insurance record would reduce your real figure, so check your gov.uk forecast.',
+    relevantWhen: () => true,
+    format: (inputs) => money(inputs.estimatedStatePensionAnnual),
+  },
+];
+
+function focusField(name) {
+  const el = form.elements[name];
+  if (!el) return;
+  const details = el.closest('details');
+  if (details && !details.open) details.open = true;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.focus();
+  el.classList.add('field-highlight');
+  setTimeout(() => el.classList.remove('field-highlight'), 1500);
+}
+
+function renderAssumptionsUsedPanel(inputs, model) {
+  const items = ASSUMPTIONS_USED.filter((a) => a.relevantWhen(inputs, model));
+  return `
+    <article class="panel">
+      <h2>Assumptions used</h2>
+      <details class="projection-details assumptions-used-panel">
+        <summary>Show what's being assumed for you (${items.length})</summary>
+        <ul class="assumptions-used-list">
+          ${items.map((a) => `
+            <li class="assumptions-used-row">
+              <div class="assumptions-used-main">
+                <span class="assumptions-used-label">${a.label}</span>
+                <span class="assumptions-used-value">${a.format(inputs)}</span>
+              </div>
+              <p class="assumptions-used-rationale">${a.rationale}</p>
+              <button type="button" class="assumptions-used-edit" data-edit-field="${a.key}">Edit this</button>
+            </li>`).join('')}
+        </ul>
+      </details>
+    </article>`;
+}
+
 function render(model, inputs) {
   const scenarioCards = model.scenarioSummary.scenarios
     .map((s, i) => renderScenarioCard(s, i, model, inputs))
@@ -447,6 +573,7 @@ function render(model, inputs) {
 
   resultsEl.innerHTML = `
     <section class="scenario-grid">${scenarioCards}</section>
+    ${renderAssumptionsUsedPanel(inputs, model)}
     ${renderTargetIncome(model.targetIncomeCalculator)}
     ${renderAnnualAllowance(model.annualAllowance)}
     <article class="panel">
@@ -526,4 +653,10 @@ function update() {
 
 form.addEventListener('input', update);
 form.addEventListener('change', update);
+
+resultsEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-edit-field]');
+  if (btn) focusField(btn.dataset.editField);
+});
+
 update();
