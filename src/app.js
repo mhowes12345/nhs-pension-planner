@@ -86,6 +86,69 @@ function refreshConditionalFields() {
   });
 }
 
+// ---- guided / advanced mode -------------------------------------------------
+// Guided mode is the default onboarding view: only the 3 quick-start fields are
+// shown at first, everything else takes its HTML default until a later guided
+// stage (or Advanced mode) surfaces it. Both modes read/write the exact same
+// <form> — nothing is duplicated, so switching modes never loses or diverges data.
+
+const MODE_KEY = 'nhsPensionPlanner:mode';
+const GUIDED_QUICKSTART_FIELDS = ['dateOfBirth', 'currentPensionablePay', 'carePotLastStatement', 'carePotStatementTaxYearEnd'];
+
+let currentMode = 'guided';
+try {
+  const storedMode = localStorage.getItem(MODE_KEY);
+  if (storedMode === 'advanced' || storedMode === 'guided') currentMode = storedMode;
+} catch (e) {
+  // storage unavailable — default to guided
+}
+
+// A fieldset/details block that contains ONLY quick-start fields is left alone in
+// guided mode (it doesn't exist yet, but would show in full); one that contains a
+// MIX (e.g. "Personal" also has tax-year/State-Pension fields) stays visible with
+// just its non-quick-start labels hidden; one with NO quick-start fields is hidden
+// entirely. Fully data-driven off the field-name list above — no HTML markup needed.
+function applyGuidedVisibility() {
+  const guided = currentMode === 'guided';
+  form.querySelectorAll('fieldset, details.input-section').forEach((container) => {
+    const labels = Array.from(container.querySelectorAll('label'));
+    if (!guided) {
+      container.style.display = '';
+      labels.forEach((l) => { l.style.display = ''; });
+      return;
+    }
+    const isQuickstartLabel = (l) => {
+      const input = l.querySelector('[name]');
+      return input && GUIDED_QUICKSTART_FIELDS.includes(input.name);
+    };
+    const hasQuickstartField = labels.some(isQuickstartLabel);
+    if (!hasQuickstartField) {
+      container.style.display = 'none';
+      return;
+    }
+    container.style.display = '';
+    labels.forEach((l) => { l.style.display = isQuickstartLabel(l) ? '' : 'none'; });
+  });
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  try { localStorage.setItem(MODE_KEY, mode); } catch (e) {}
+  document.querySelectorAll('.mode-toggle-btn').forEach((btn) => {
+    const active = btn.dataset.mode === mode;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', String(active));
+  });
+  update();
+}
+
+document.querySelectorAll('.mode-toggle-btn').forEach((btn) => {
+  btn.addEventListener('click', () => setMode(btn.dataset.mode));
+  const active = btn.dataset.mode === currentMode;
+  btn.classList.toggle('active', active);
+  btn.setAttribute('aria-pressed', String(active));
+});
+
 // ---- read form -> inputs object matching calcEngine schema ----------------
 
 function pct(name) {
@@ -180,6 +243,43 @@ function readInputs() {
 
     householdType: str('householdType'),
   };
+}
+
+// ---- guided headline (two derived ages) -------------------------------------
+// The headline reuses the exact same engine call as the scenario grid — inputs.scenarios
+// is just a list the engine maps over, not hardcoded to 3 — so no engine change is needed:
+// we just build a 2-entry scenarios list (retire = claim, at each headline age) and call
+// runModel a second time on that.
+
+function normalMinimumPensionAge(asOfDate) {
+  return asOfDate >= new Date('2028-04-06') ? 57 : 55;
+}
+
+// Starts as [min private-pension access age, State Pension Age] — the only two ages
+// derivable from the 3 quick-start fields alone. Once legacy service is entered (via a
+// later guided stage, or Advanced mode), swaps to the member's real NPAs (60 for 1995
+// Section, 65 for 2008 Section) so the headline sharpens as more is disclosed.
+function computeHeadlineAges(inputs, model) {
+  const hasSection1995 = inputs.legacy1995Pension > 0 || inputs.legacy1995LumpSum > 0;
+  const hasSection2008 = inputs.legacy2008Pension > 0 || inputs.legacy2008LumpSum > 0;
+  const spa = model.personal.statePensionAge;
+
+  if (hasSection1995 && hasSection2008) return [60, 65];
+  if (hasSection1995) return [60, spa];
+  if (hasSection2008) return [65, spa];
+  return [normalMinimumPensionAge(new Date()), spa];
+}
+
+function buildHeadlineModel(inputs, model) {
+  const [age1, age2] = computeHeadlineAges(inputs, model);
+  const headlineInputs = {
+    ...inputs,
+    scenarios: [
+      { retirementAge: age1, nhsClaimAge: age1 },
+      { retirementAge: age2, nhsClaimAge: age2 },
+    ],
+  };
+  return CalcEngine.runModel(headlineInputs, new Date());
 }
 
 // ---- formatting -------------------------------------------------------------
@@ -536,6 +636,10 @@ const ASSUMPTIONS_USED = [
 function focusField(name) {
   const el = form.elements[name];
   if (!el) return;
+  // Advanced-only assumption fields (SIPP growth, legacy growth rate, etc.) aren't
+  // part of the guided quick-start, so they're hidden in Guided mode — jump to
+  // Advanced mode first so the "Edit this" control actually lands somewhere visible.
+  if (currentMode !== 'advanced') setMode('advanced');
   const details = el.closest('details');
   if (details && !details.open) details.open = true;
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -566,7 +670,7 @@ function renderAssumptionsUsedPanel(inputs, model) {
     </article>`;
 }
 
-function render(model, inputs) {
+function renderAdvancedResults(model, inputs) {
   const scenarioCards = model.scenarioSummary.scenarios
     .map((s, i) => renderScenarioCard(s, i, model, inputs))
     .join('');
@@ -592,6 +696,43 @@ function render(model, inputs) {
     ${renderAssumptionsPanel()}
     <p class="footer-note">Current age: ${model.personal.currentAge} · State Pension Age: ${model.personal.statePensionAge}</p>
   `;
+}
+
+// Headline: two derived ages, income if you stop work and claim NHS pension at the
+// same age. No scenario comparison, no tables — see §6 of the guided-rework brief:
+// "lead with the headline number(s), not a table."
+function renderHeadline(headlineModel) {
+  const [s1, s2] = headlineModel.scenarioSummary.scenarios;
+  const item = (s) => `
+    <div class="headline-item">
+      <div class="headline-age">From age ${s.retirementAge}</div>
+      <div class="headline-amount">${money(s.totalIncomeFromClaimAge)}<span>/yr</span></div>
+    </div>`;
+  return `
+    <section class="headline-panel">
+      ${item(s1)}
+      ${item(s2)}
+    </section>
+    <p class="hint headline-note">In today's money, based on what you've told us so far — this gets more accurate as you answer a few more questions.</p>`;
+}
+
+function renderGuidedResults(model, headlineModel, inputs) {
+  resultsEl.innerHTML = `
+    ${renderHeadline(headlineModel)}
+    ${renderAssumptionsUsedPanel(inputs, model)}
+    ${renderTargetIncome(model.targetIncomeCalculator)}
+    ${renderRetirementLivingStandardsPanel(model)}
+    ${renderGlossaryPanel()}
+    ${renderAssumptionsPanel()}
+  `;
+}
+
+function render(model, headlineModel, inputs) {
+  if (currentMode === 'guided') {
+    renderGuidedResults(model, headlineModel, inputs);
+  } else {
+    renderAdvancedResults(model, inputs);
+  }
 }
 
 // ---- field notes (hover tooltips) ------------------------------------------
@@ -644,10 +785,15 @@ form.addEventListener('focusout', () => hideTooltip());
 // ---- update loop --------------------------------------------------------------
 
 function update() {
+  // Order matters: guided-mode visibility hides/shows whole fieldsets first, then
+  // conditional-field visibility (DB/DC subfields etc.) refines within whatever is
+  // currently shown — reversed, advanced mode's reset would clobber the conditionals.
+  applyGuidedVisibility();
   refreshConditionalFields();
   const inputs = readInputs();
   const model = CalcEngine.runModel(inputs, new Date());
-  render(model, inputs);
+  const headlineModel = currentMode === 'guided' ? buildHeadlineModel(inputs, model) : null;
+  render(model, headlineModel, inputs);
   saveFormToStorage();
 }
 
