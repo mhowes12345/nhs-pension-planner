@@ -10,6 +10,9 @@
   --warn: #ed8b00;
   --below: #da291c;
   --input-bg: #f4f8fb;
+  /* Caps the page content on large screens so the boxes don't sprawl — the extra
+     space becomes even margin on both sides. Below this width nothing is constrained. */
+  --content-max: 82.5rem; /* 1320px */
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -30,6 +33,8 @@ body {
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
+  max-width: var(--content-max);
+  margin: 0 auto;
 }
 .app-header-text { flex: 1; min-width: 0; }
 .app-header h1 { margin: 0 0 0.3rem; font-size: 1.3rem; color: var(--accent); }
@@ -65,6 +70,8 @@ body {
   padding: 1.5rem;
   text-align: center;
   border-top: 1px solid var(--panel-border);
+  max-width: var(--content-max);
+  margin: 0 auto;
 }
 .footer-privacy {
   margin: 0.9rem 0 0.4rem;
@@ -87,6 +94,8 @@ body {
   gap: 1rem;
   align-items: start;
   padding: 1rem;
+  max-width: var(--content-max);
+  margin: 0 auto;
 }
 /* Grid items default to min-width:auto, which floors their track at the content's
    min-content size and can force the whole grid wider than the viewport. Override so
@@ -611,6 +620,8 @@ label[data-note] {
   flex-direction: column;
   gap: 0.7rem;
   padding: 1rem;
+  max-width: var(--content-max);
+  margin: 0 auto;
 }
 .reference-panels:empty { display: none; }
 
