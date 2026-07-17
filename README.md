@@ -2,6 +2,8 @@
 
 A client-side retirement income calculator for NHS pension members, combining the legacy 1995/2008 Section, the 2015 CARE scheme, and private pensions/savings (SIPP, LISA, S&S ISA, AVC, GIA) into combined income projections at different retirement ages.
 
+Opens in a **guided mode**: three inputs (date of birth, pensionable pay, and the pension figure from your NHS statement) produce an immediate headline projection, then a short question-by-question flow reveals further fields only where they apply — with "Where do I find this?" pointers to the exact lines on your Total Reward Statement / NHSBSA estimate. An **Advanced (full form)** toggle exposes every input and assumption directly; both modes share the same underlying state, so switching never loses data.
+
 Live app: https://mhowes12345.github.io/nhs-pension-planner/
 
 **This is a projection tool, not financial advice.** Figures are based on the assumptions you enter — see the Assumptions & Sources section in the app for defaults and sources. Speak to a regulated financial adviser before making retirement decisions.
@@ -24,4 +26,6 @@ Serves the app at http://localhost:5588/.
 npm test
 ```
 
-Validates `src/calcEngine.js` against exact numeric ground truth extracted from the source spreadsheet (via Excel COM automation) for three scenarios: the default case, an edge case exercising less-common inputs, and a deferred NHS pension claim age scenario. See `test/calcEngine.test.js`.
+Validates `src/calcEngine.js` against exact numeric ground truth extracted from the source spreadsheet (via Excel COM automation) for four scenarios: the default case, an edge case exercising less-common inputs, a deferred NHS pension claim age scenario, and a Bridge-drawdown-before-SPA scenario. See `test/calcEngine.test.js`.
+
+`test/guidedFlow.test.js` additionally checks the guided-onboarding layer: the three-input quick start with all HTML defaults must produce a valid projection (no NaN/undefined/silent zeroes), and every field/container the wizard reveals must actually exist in the form.
