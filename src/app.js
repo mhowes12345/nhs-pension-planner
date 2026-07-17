@@ -40,6 +40,87 @@ document.getElementById('oldPensionsFieldset').insertAdjacentHTML(
   [1, 2, 3].map(oldPensionRowHtml).join('')
 );
 
+// ---- "Where do I find this?" TRS guidance (§3 of the rework brief) ----------
+// Almost every figure the app needs is on the member's NHS pension statement —
+// either the online Total Reward Statement / Annual Benefit Statement, or a posted
+// NHSBSA "Retirement Benefit Estimate" letter (same figures, near-identical layout).
+// Each TRS-sourced field gets an expander showing a mock of the relevant statement
+// block with the right line highlighted. All values in the mocks are fictional.
+
+function trsDoc2015(highlight) {
+  const hl = (k) => (highlight === k ? ' trs-hl' : '');
+  return `
+    <div class="trs-doc">
+      <div class="trs-doc-title">NHS Pension 2015 Scheme — Age Retirement Benefit Estimate</div>
+      <div class="trs-line${hl('updated')}">Last updated to: 31 March 2025${highlight === 'updated' ? '<span class="trs-arrow">&larr; enter 2025</span>' : ''}</div>
+      <div class="trs-line${hl('ap')}">Additional Pension: £0.00${highlight === 'ap' ? '<span class="trs-arrow">&larr; this one</span>' : ''}</div>
+      <div class="trs-doc-sub">Accrued Retirement Benefits:</div>
+      <div class="trs-line${hl('pension')}">Pension: £3,150.00 a year${highlight === 'pension' ? '<span class="trs-arrow">&larr; this one</span>' : ''}</div>
+      <div class="trs-line trs-dim">Pension (reduced): £2,025.00 a year</div>
+      <div class="trs-line trs-dim">Lump Sum Retiring Allowance (maximum): £13,500.00</div>
+    </div>`;
+}
+
+function trsDocLegacy(section, highlight) {
+  const hl = (k) => (highlight === k ? ' trs-hl' : '');
+  return `
+    <div class="trs-doc">
+      <div class="trs-doc-title">NHS Pension Scheme (${section} Section) — Retirement Benefit Estimate</div>
+      <div class="trs-doc-sub">Age Retirement Benefits:</div>
+      <div class="trs-line${hl('pension')}">Pension: £6,200.00 a year${highlight === 'pension' ? '<span class="trs-arrow">&larr; this one</span>' : ''}</div>
+      <div class="trs-line${hl('lumpsum')}">Lump Sum Retiring Allowance: ${section === '1995' ? '£18,600.00' : '£0.00'}${highlight === 'lumpsum' ? '<span class="trs-arrow">&larr; this one</span>' : ''}</div>
+      <div class="trs-line trs-dim">Survivor Pension: £2,325.00 a year</div>
+    </div>`;
+}
+
+const TRS_GUIDES = {
+  carePotLastStatement: {
+    text: 'Log in at totalrewardstatements.nhs.uk (or use a posted NHSBSA estimate letter). On the <strong>2015 Scheme</strong> statement, under “Accrued Retirement Benefits”, copy the yearly <strong>Pension</strong> figure. Use the full figure — not the “Pension (reduced)” line, which assumes you take the maximum lump sum.',
+    doc: () => trsDoc2015('pension'),
+  },
+  carePotStatementTaxYearEnd: {
+    text: 'Near the top of the same 2015 Scheme statement, find <strong>“Last updated to”</strong> — enter the year from that date. Statements are often a year or more behind; the model automatically brings the figure up to date.',
+    doc: () => trsDoc2015('updated'),
+  },
+  apPurchasedAnnual: {
+    text: 'On the 2015 Scheme statement, the <strong>“Additional Pension”</strong> line shows any extra pension you’ve bought. £0.00 there means none — leave this as 0.',
+    doc: () => trsDoc2015('ap'),
+  },
+  legacy1995Pension: {
+    text: 'If you have 1995 Section membership, your statement includes a <strong>1995 Section</strong> block. Under “Age Retirement Benefits”, copy the yearly <strong>Pension</strong> figure.',
+    doc: () => trsDocLegacy('1995', 'pension'),
+  },
+  legacy1995LumpSum: {
+    text: 'Same 1995 Section block — copy the <strong>Lump Sum Retiring Allowance</strong> figure. The 1995 Section pays this automatically on top of the pension.',
+    doc: () => trsDocLegacy('1995', 'lumpsum'),
+  },
+  legacy2008Pension: {
+    text: 'If you have 2008 Section membership, your statement includes a <strong>2008 Section</strong> block. Under “Age Retirement Benefits”, copy the yearly <strong>Pension</strong> figure — the full one, not “Pension (reduced)”.',
+    doc: () => trsDocLegacy('2008', 'pension'),
+  },
+  legacy2008LumpSum: {
+    text: 'Same 2008 Section block — the <strong>Lump Sum Retiring Allowance</strong> line. Usually £0.00: the 2008 Section has no automatic lump sum (you can still exchange pension for one at retirement).',
+    doc: () => trsDocLegacy('2008', 'lumpsum'),
+  },
+  currentPensionablePay: {
+    text: 'Your total pensionable pay this year, across all NHS posts. A recent payslip shows it, or your statement’s <strong>Pensionable Earnings Statement</strong> page lists last year’s figure per year — use your best current-year estimate.',
+    doc: null,
+  },
+};
+
+Object.entries(TRS_GUIDES).forEach(([name, guide]) => {
+  const el = form.elements[name];
+  if (!el) return;
+  const label = el.closest('label');
+  if (!label) return;
+  label.insertAdjacentHTML('afterend', `
+    <details class="trs-help" data-trs-for="${name}">
+      <summary>Where do I find this?</summary>
+      <p>${guide.text}</p>
+      ${guide.doc ? guide.doc() : ''}
+    </details>`);
+});
+
 // ---- persistence (localStorage autosave) -----------------------------------
 // Saves every field on each recalculation and restores it on load, so the form
 // survives a refresh. Wrapped in try/catch since localStorage can throw (private
@@ -110,6 +191,8 @@ try {
 // populated by the wizard below, based on the user's answers so far.
 function applyGuidedVisibility() {
   const guided = currentMode === 'guided';
+  const intro = document.getElementById('guidedIntro');
+  if (intro) intro.style.display = guided ? '' : 'none';
   form.querySelectorAll('fieldset, details.input-section').forEach((container) => {
     const labels = Array.from(container.querySelectorAll('label'));
     if (!guided) {
@@ -133,6 +216,13 @@ function applyGuidedVisibility() {
     }
     container.style.display = '';
     labels.forEach((l) => { l.style.display = isVisibleLabel(l) ? '' : 'none'; });
+  });
+  // "Where do I find this?" expanders sit AFTER their field's label, so the label
+  // toggling above doesn't reach them — mirror each one to its field's label.
+  form.querySelectorAll('.trs-help[data-trs-for]').forEach((help) => {
+    const el = form.elements[help.dataset.trsFor];
+    const label = el && el.closest('label');
+    help.style.display = label && label.style.display !== 'none' ? '' : 'none';
   });
 }
 
