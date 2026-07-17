@@ -26,7 +26,7 @@ function oldPensionRowHtml(n) {
       <label data-depends-on="oldPension${n}Type" data-depends-value="Defined Contribution" data-note="Only used if Type = Defined Contribution">DC: current balance (£)
         <input type="number" name="oldPension${n}DcBalance" value="0" step="1" min="0">
       </label>
-      <label data-depends-on="oldPension${n}Type" data-depends-value="Defined Contribution" data-note="Only used if Type = Defined Contribution">DC: assumed REAL growth rate p.a. (%)
+      <label data-guided-label="DC: growth above inflation, % a year" data-depends-on="oldPension${n}Type" data-depends-value="Defined Contribution" data-note="Only used if Type = Defined Contribution">DC: assumed REAL growth rate p.a. (%)
         <input type="number" name="oldPension${n}DcGrowthRate" value="4.5" step="0.1">
       </label>
       <label data-depends-on="oldPension${n}Type" data-depends-value="Defined Contribution" data-note="Only used if Type = Defined Contribution">DC: access age
@@ -75,7 +75,7 @@ function trsDocLegacy(section, highlight) {
 
 const TRS_GUIDES = {
   carePotLastStatement: {
-    text: 'Log in at totalrewardstatements.nhs.uk (or use a posted NHSBSA estimate letter). On the <strong>2015 Scheme</strong> statement, under “Accrued Retirement Benefits”, copy the yearly <strong>Pension</strong> figure. Use the full figure — not the “Pension (reduced)” line, which assumes you take the maximum lump sum.',
+    text: 'Log in at totalrewardstatements.nhs.uk (or use a posted NHSBSA estimate letter). On the <strong>2015 Scheme</strong> statement, under “Accrued Retirement Benefits”, copy the yearly <strong>Pension</strong> figure. Use the full figure — not the “Pension (reduced)” line, which assumes you take the maximum lump sum. This figure should already include the McCloud remedy — the automatic fix that gives you the better of the old and new scheme rules for 2015–2022 service.',
     doc: () => trsDoc2015('pension'),
   },
   carePotStatementTaxYearEnd: {
@@ -224,6 +224,16 @@ function applyGuidedVisibility() {
     const label = el && el.closest('label');
     help.style.display = label && label.style.display !== 'none' ? '' : 'none';
   });
+  // §5 copy pass: labels carrying data-guided-label show plain-English wording in
+  // guided mode ("growth above inflation" instead of "REAL", no unexplained CARE/
+  // TRS jargon) while Advanced keeps the original technical labels. Only the
+  // label's leading text node is swapped — the input inside is untouched.
+  form.querySelectorAll('label[data-guided-label]').forEach((label) => {
+    const textNode = label.firstChild;
+    if (!textNode || textNode.nodeType !== Node.TEXT_NODE) return;
+    if (!label.dataset.advancedLabel) label.dataset.advancedLabel = textNode.nodeValue;
+    textNode.nodeValue = guided ? label.dataset.guidedLabel : label.dataset.advancedLabel;
+  });
 }
 
 function setMode(mode) {
@@ -280,9 +290,9 @@ const WIZARD_STEPS = [
   {
     id: 'private',
     question: 'Do you pay into a private pension or ISA?',
-    help: 'A SIPP, workplace pension outside the NHS, Lifetime ISA, or Stocks & Shares ISA — anything you’re saving for retirement beyond the NHS scheme.',
+    help: 'A SIPP (a private pension you run yourself), Lifetime ISA, Stocks & Shares ISA, or a GIA (a general investment account — taxable investments held outside a pension or ISA). Anything you’re saving for retirement beyond the NHS scheme.',
     notSure: false,
-    revealFields: ['sippBalance', 'sippContribution', 'sippGrowthRate', 'lisaBalance', 'lisaContribution', 'lisaGrowthRate', 'isaBalance', 'isaContribution', 'isaGrowthRate'],
+    revealFields: ['sippBalance', 'sippContribution', 'sippGrowthRate', 'lisaBalance', 'lisaContribution', 'lisaGrowthRate', 'isaBalance', 'isaContribution', 'isaGrowthRate', 'giaBalance', 'giaContribution', 'giaGrowthRateGross', 'marginalTaxBand'],
   },
   {
     id: 'apAvc',
@@ -1069,10 +1079,14 @@ function renderGuidedResults(model, inputs) {
     ? `<section class="scenario-grid">${model.scenarioSummary.scenarios
         .map((s, i) => renderScenarioCard(s, i, model, inputs)).join('')}</section>`
     : '';
+  // The target-income fields aren't part of the guided flow, so with no target set
+  // the calculator would just render an empty £0 table — show it only once a target
+  // exists (set via Advanced mode).
+  const targetPanel = inputs.targetIncome > 0 ? renderTargetIncome(model.targetIncomeCalculator) : '';
   resultsEl.innerHTML = `
     ${scenarioCards}
     ${renderAssumptionsUsedPanel(inputs, model)}
-    ${renderTargetIncome(model.targetIncomeCalculator)}
+    ${targetPanel}
     ${renderRetirementLivingStandardsPanel(model)}
     ${renderGlossaryPanel()}
     ${renderAssumptionsPanel()}

@@ -107,13 +107,13 @@
 
     <fieldset>
       <div class="section-title">NHS 2015 Scheme (CARE)</div>
-      <label data-note="Should already reflect McCloud remedy correction — see README">2015 CARE pot — most recent TRS/ABS value (£)
+      <label data-guided-label="NHS pension earned so far (£ a year, from your statement)" data-note="Should already reflect McCloud remedy correction — see README">2015 CARE pot — most recent TRS/ABS value (£)
         <input type="number" name="carePotLastStatement" value="0" step="1" min="0" required>
       </label>
-      <label data-note="TRS statements are often out of date — e.g. a statement 'Updated To 31/03/2024' means enter 2024 here. The model automatically brings your pot up to date using your current pay and the assumptions below, before projecting forward.">...that TRS/ABS value is as at tax year ending
+      <label data-guided-label="The year that statement was last updated to" data-note="TRS statements are often out of date — e.g. a statement 'Updated To 31/03/2024' means enter 2024 here. The model automatically brings your pot up to date using your current pay and the assumptions below, before projecting forward.">...that TRS/ABS value is as at tax year ending
         <input type="number" name="carePotStatementTaxYearEnd" value="2024" step="1" required>
       </label>
-      <label data-note="Total pensionable earnings this year, all NHS posts combined">Current annual pensionable pay (£)
+      <label data-guided-label="Your NHS pensionable pay this year (£)" data-note="Total pensionable earnings this year, all NHS posts combined">Current annual pensionable pay (£)
         <input type="number" name="currentPensionablePay" value="0" step="1" min="0" required>
       </label>
       <label data-note="This is growth ABOVE inflation, not your total pay rise. AfC awards often just track or slightly beat inflation — 0-1.5% real is a reasonable long-run planning assumption. See Assumptions tab.">Assumed REAL pay growth rate p.a. (%)
@@ -138,7 +138,7 @@
       <label>NHS AVC annual contribution (£)
         <input type="number" name="avcContribution" value="0" step="1" min="0">
       </label>
-      <label>NHS AVC assumed REAL growth rate p.a. (%)
+      <label data-guided-label="NHS AVC growth above inflation, % a year">NHS AVC assumed REAL growth rate p.a. (%)
         <input type="number" name="avcGrowthRate" value="4.5" step="0.1">
       </label>
     </details>
@@ -148,7 +148,7 @@
       <label data-note="Early Retirement Reduction Buy Out: lets 2015 Scheme members buy out some/all of the reduction for retiring before their Normal Pension Age. Enter how many years you've bought out (0 if none). This offsets the reduction applied for Scenarios claiming before your Normal Pension Age/State Pension Age.">ERRBO — years of reduction bought out
         <input type="number" name="errboYearsBoughtOut" value="0" step="1" min="0">
       </label>
-      <label data-note="Illustrative flat rate. NHSBSA's real reduction factors are non-linear (roughly 3-5%+ per year, increasing the further before Normal Pension Age) — check the exact factors on your TRS/ABS or NHSBSA's early retirement calculator for a precise figure.">Assumed early retirement reduction p.a., not bought out (%)
+      <label data-guided-label="Pension reduction for each year claimed early, % (after any buy-out)" data-note="Illustrative flat rate. NHSBSA's real reduction factors are non-linear (roughly 3-5%+ per year, increasing the further before Normal Pension Age) — check the exact factors on your TRS/ABS or NHSBSA's early retirement calculator for a precise figure.">Assumed early retirement reduction p.a., not bought out (%)
         <input type="number" name="earlyRetirementReductionRate" value="5.0" step="0.1">
       </label>
     </details>
@@ -161,7 +161,7 @@
       <label data-note="Find this on your provider's annual statement as 'gross contribution' or 'total contribution including tax relief'. If you pay in net (relief at source), gross = net x 1.25 (basic rate 20% relief is added automatically). If you're a higher/additional rate taxpayer, extra relief you claim via Self Assessment is a tax saving to you personally, but doesn't change this gross figure.">SIPP annual contribution, gross (£)
         <input type="number" name="sippContribution" value="0" step="1" min="0">
       </label>
-      <label data-note="See Assumptions tab for the historical reasoning behind this figure — it should reflect real, above-inflation returns, net of platform/fund charges, for your actual asset mix (not 100% equities).">SIPP assumed REAL growth rate p.a. (%)
+      <label data-guided-label="SIPP growth above inflation, % a year (so all figures stay in today's money)" data-note="See Assumptions tab for the historical reasoning behind this figure — it should reflect real, above-inflation returns, net of platform/fund charges, for your actual asset mix (not 100% equities).">SIPP assumed REAL growth rate p.a. (%)
         <input type="number" name="sippGrowthRate" value="4.5" step="0.1">
       </label>
       <label>LISA current balance (£)
@@ -170,7 +170,7 @@
       <label data-note="£4,000 annual cap; 25% government bonus added separately below. You CANNOT open a new LISA after age 39, and your last eligible contribution year is age 49 — contributions automatically stop in the projection below from age 50, even though this cell still shows your figure. LISAs are also being phased out for NEW savers from ~April 2028 — see Assumptions tab for what this does and doesn't mean for you.">LISA annual contribution (£)
         <input type="number" name="lisaContribution" value="0" step="1" min="0">
       </label>
-      <label data-note="Based on the UBS/Credit Suisse Global Investment Returns Yearbook 2026: world equities have returned ~5.2% real annualised since 1900, though only ~3.5% since 2000. A diversified (not 100%-equity) portfolio would typically sit below the pure-equity figure — 4.5% is a middle-of-the-road illustrative assumption, not a promise. Adjust down for a more conservative asset mix, especially closer to retirement.">LISA assumed REAL growth rate p.a. (%)
+      <label data-guided-label="LISA growth above inflation, % a year" data-note="Based on the UBS/Credit Suisse Global Investment Returns Yearbook 2026: world equities have returned ~5.2% real annualised since 1900, though only ~3.5% since 2000. A diversified (not 100%-equity) portfolio would typically sit below the pure-equity figure — 4.5% is a middle-of-the-road illustrative assumption, not a promise. Adjust down for a more conservative asset mix, especially closer to retirement.">LISA assumed REAL growth rate p.a. (%)
         <input type="number" name="lisaGrowthRate" value="4.5" step="0.1">
       </label>
       <label>S&amp;S ISA current balance (£)
@@ -179,7 +179,7 @@
       <label>S&amp;S ISA annual contribution (£)
         <input type="number" name="isaContribution" value="0" step="1" min="0">
       </label>
-      <label data-note="Based on the UBS/Credit Suisse Global Investment Returns Yearbook 2026: world equities have returned ~5.2% real annualised since 1900, though only ~3.5% since 2000. A diversified (not 100%-equity) portfolio would typically sit below the pure-equity figure — 4.5% is a middle-of-the-road illustrative assumption, not a promise. Adjust down for a more conservative asset mix, especially closer to retirement.">S&amp;S ISA assumed REAL growth rate p.a. (%)
+      <label data-guided-label="S&amp;S ISA growth above inflation, % a year" data-note="Based on the UBS/Credit Suisse Global Investment Returns Yearbook 2026: world equities have returned ~5.2% real annualised since 1900, though only ~3.5% since 2000. A diversified (not 100%-equity) portfolio would typically sit below the pure-equity figure — 4.5% is a middle-of-the-road illustrative assumption, not a promise. Adjust down for a more conservative asset mix, especially closer to retirement.">S&amp;S ISA assumed REAL growth rate p.a. (%)
         <input type="number" name="isaGrowthRate" value="4.5" step="0.1">
       </label>
     </details>
@@ -192,7 +192,7 @@
       <label>GIA annual contribution (£)
         <input type="number" name="giaContribution" value="0" step="1" min="0">
       </label>
-      <label data-note="Same reasoning as SIPP/ISA on the Assumptions tab — this is the pre-tax figure; tax drag is applied separately below">GIA assumed REAL growth rate p.a., gross (%)
+      <label data-guided-label="GIA growth above inflation, % a year (before tax)" data-note="Same reasoning as SIPP/ISA on the Assumptions tab — this is the pre-tax figure; tax drag is applied separately below">GIA assumed REAL growth rate p.a., gross (%)
         <input type="number" name="giaGrowthRateGross" value="4.5" step="0.1">
       </label>
       <label data-note="Sets a default tax drag estimate below based on your tax band — see Assumptions tab for the reasoning">Marginal tax rate (for GIA tax drag estimate)
