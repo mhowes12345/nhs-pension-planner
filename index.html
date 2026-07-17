@@ -261,11 +261,16 @@
 
 <footer class="app-footer">
   <a class="kofi-button" href="https://ko-fi.com/mikkyh" target="_blank" rel="noopener noreferrer">&#9749; Buy me a coffee</a>
-  <p class="footer-privacy">Your figures are saved only in this browser (so they survive a refresh) and are never sent anywhere.</p>
+  <p class="footer-privacy">Your figures are saved only in this browser (so they survive a refresh) and are never sent anywhere. We count anonymous page visits (via GoatCounter — no cookies, no personal data, nothing you enter) just to see how many people find the tool useful.</p>
   <button type="button" id="clearDataBtn" class="clear-data-btn">Clear my data from this browser</button>
 </footer>
 
 <script src="src/calcEngine.js"></script>
 <script src="src/app.js"></script>
+<!-- Privacy-friendly, cookie-free visit counting. Records only the page URL,
+     referrer and a country derived from IP (which is then discarded). It has no
+     access to anything entered in the form. -->
+<script data-goatcounter="https://mhowes12345.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
