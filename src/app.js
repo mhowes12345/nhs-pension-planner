@@ -329,6 +329,13 @@ const WIZARD_STEPS = [
     },
   },
   {
+    id: 'targetIncome',
+    question: 'Do you have a target retirement income in mind?',
+    help: 'Tell us the yearly income you’d like in retirement (in today’s money) and the tool works backwards — showing any gap, and what extra saving would close it.',
+    notSure: false,
+    revealFields: ['targetIncome', 'targetAge', 'targetSavingsGrowthRate'],
+  },
+  {
     id: 'compareAges',
     question: 'Do you want to compare stopping work at different ages?',
     help: 'See side-by-side what retiring at, say, 57 vs 60 vs 67 would mean — including stopping work early but claiming your NHS pension later, with private savings bridging the gap.',
@@ -602,25 +609,30 @@ function normalMinimumPensionAge(asOfDate) {
 // derivable from the 3 quick-start fields alone. Once legacy service is entered (via a
 // later guided stage, or Advanced mode), swaps to the member's real NPAs (60 for 1995
 // Section, 65 for 2008 Section) so the headline sharpens as more is disclosed.
+// Ages already behind the member are clamped up to their current age (the engine's
+// projections start there — a past age would render "n/a"), and if the two ages then
+// collapse into one (e.g. a member already past State Pension Age), one age is shown.
 function computeHeadlineAges(inputs, model) {
   const hasSection1995 = inputs.legacy1995Pension > 0 || inputs.legacy1995LumpSum > 0;
   const hasSection2008 = inputs.legacy2008Pension > 0 || inputs.legacy2008LumpSum > 0;
   const spa = model.personal.statePensionAge;
 
-  if (hasSection1995 && hasSection2008) return [60, 65];
-  if (hasSection1995) return [60, spa];
-  if (hasSection2008) return [65, spa];
-  return [normalMinimumPensionAge(new Date()), spa];
+  let ages;
+  if (hasSection1995 && hasSection2008) ages = [60, 65];
+  else if (hasSection1995) ages = [60, spa];
+  else if (hasSection2008) ages = [65, spa];
+  else ages = [normalMinimumPensionAge(new Date()), spa];
+
+  const minAge = model.personal.currentAge;
+  ages = ages.map((a) => Math.max(a, minAge));
+  return ages[0] >= ages[1] ? [ages[0]] : ages;
 }
 
 function buildHeadlineModel(inputs, model) {
-  const [age1, age2] = computeHeadlineAges(inputs, model);
+  const ages = computeHeadlineAges(inputs, model);
   const headlineInputs = {
     ...inputs,
-    scenarios: [
-      { retirementAge: age1, nhsClaimAge: age1 },
-      { retirementAge: age2, nhsClaimAge: age2 },
-    ],
+    scenarios: ages.map((age) => ({ retirementAge: age, nhsClaimAge: age })),
   };
   return CalcEngine.runModel(headlineInputs, new Date());
 }
@@ -1047,27 +1059,35 @@ function renderAdvancedResults(model, inputs) {
 // (#guidedHeadlineBar, outside the two-column layout) rather than inside #results,
 // so it stays pinned above the wizard as the user scrolls through it — on mobile in
 // particular, the input/results columns stack and neither is otherwise sticky.
-function renderGuidedHeadlineBar(headlineModel) {
+function renderGuidedHeadlineBar(headlineModel, inputs) {
   const bar = document.getElementById('guidedHeadlineBar');
   if (currentMode !== 'guided') {
     bar.style.display = 'none';
     return;
   }
   bar.style.display = '';
-  const [s1, s2] = headlineModel.scenarioSummary.scenarios;
-  const item = (s) => `
+  // Before any money has been entered the projection is a bare £0 — invite the
+  // input instead of celebrating a meaningless number.
+  if (inputs.currentPensionablePay === 0 && inputs.carePotLastStatement === 0) {
+    bar.innerHTML = `
+      <section class="headline-panel">
+        <div class="headline-item">
+          <div class="headline-age">Your projected retirement income</div>
+          <div class="headline-empty">Enter your pay and NHS pension figures below to see it.</div>
+        </div>
+      </section>`;
+    return;
+  }
+  const items = headlineModel.scenarioSummary.scenarios.map((s) => `
     <div class="headline-item">
-      <div class="headline-age">From age ${s.retirementAge}</div>
+      <div class="headline-age">From age ${s.retirementAge}${s.retirementAge === headlineModel.personal.currentAge ? ' (now)' : ''}</div>
       <div class="headline-amount">${money(s.totalIncomeFromClaimAge)}<span>/yr</span></div>
-    </div>`;
+    </div>`).join('');
   const caveat = anyNotSure()
     ? `<p class="headline-note headline-caveat">This may be incomplete — you answered "Not sure" to something that could change it. Come back and update it once you know.</p>`
     : `<p class="headline-note">In today's money, based on what you've told us so far.</p>`;
   bar.innerHTML = `
-    <section class="headline-panel">
-      ${item(s1)}
-      ${item(s2)}
-    </section>
+    <section class="headline-panel">${items}</section>
     ${caveat}`;
 }
 
@@ -1094,7 +1114,7 @@ function renderGuidedResults(model, inputs) {
 }
 
 function render(model, headlineModel, inputs) {
-  renderGuidedHeadlineBar(headlineModel);
+  renderGuidedHeadlineBar(headlineModel, inputs);
   if (currentMode === 'guided') {
     renderGuidedResults(model, inputs);
   } else {
