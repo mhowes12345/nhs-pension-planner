@@ -3,6 +3,7 @@
 
 const form = document.getElementById('inputsForm');
 const resultsEl = document.getElementById('results');
+const referenceEl = document.getElementById('referencePanels');
 
 // ---- old pension rows (3 repeatable slots) --------------------------------
 
@@ -777,18 +778,21 @@ function renderTargetIncome(t) {
 
 function renderAnnualAllowance(annualAllowance) {
   const breaches = annualAllowance.filter((y) => !y.withinAA);
-  if (breaches.length === 0) {
-    return `<article class="panel"><h2>Annual Allowance</h2><p class="note ok">All projected years stay within your Annual Allowance.</p></article>`;
-  }
-  return `
-    <article class="panel">
-      <h2>Annual Allowance</h2>
+  const body = breaches.length === 0
+    ? `<p class="note ok">All projected years stay within your Annual Allowance.</p>`
+    : `
       <p class="note warn">${breaches.length} projected year(s) may exceed your Annual Allowance — worth a closer check:</p>
-      <table class="breakdown-table">
-        <tr><th>Tax year</th><th>Age</th><th>Pension input</th><th>Allowance</th></tr>
-        ${breaches.map((y) => `<tr><td>${y.taxYear}</td><td>${y.age}</td><td>${money(y.totalPensionInput)}</td><td>${money(y.allowance)}</td></tr>`).join('')}
-      </table>
-    </article>`;
+      <div class="table-scroll">
+        <table class="breakdown-table">
+          <tr><th>Tax year</th><th>Age</th><th>Pension input</th><th>Allowance</th></tr>
+          ${breaches.map((y) => `<tr><td>${y.taxYear}</td><td>${y.age}</td><td>${money(y.totalPensionInput)}</td><td>${money(y.allowance)}</td></tr>`).join('')}
+        </table>
+      </div>`;
+  return `
+    <details class="panel ref-panel">
+      <summary>Annual Allowance${breaches.length ? ` — ${breaches.length} year(s) to check` : ''}</summary>
+      ${body}
+    </details>`;
 }
 
 const PLAIN_NUMBER_COLUMNS = new Set(['taxYear', 'age']);
@@ -823,20 +827,17 @@ function renderRetirementLivingStandardsPanel(model) {
     ['Comfortable', b.comfortable, RLS_DESCRIPTIONS.comfortable],
   ];
   return `
-    <article class="panel">
-      <h2>Retirement Living Standards</h2>
+    <details class="panel ref-panel">
+      <summary>Retirement Living Standards</summary>
       <p class="note">Independent annual benchmarks (Pensions UK, formerly PLSA, researched by Loughborough University) for what different retirement lifestyles cost. These are spending targets, not income recommendations. Source: retirementlivingstandards.org.uk</p>
-      <details class="projection-details">
-        <summary>Show benchmark table</summary>
-        <div class="table-scroll">
-          <table class="reference-table">
-            <tr class="reference-table-head"><th>Standard</th><th>One-person</th><th>Two-person</th><th>What it typically includes</th></tr>
-            ${rows.map(([label, v, desc]) => `<tr><td>${label}</td><td data-label="One-person">${money(v.onePerson)}</td><td data-label="Two-person">${money(v.twoPerson)}</td><td data-label="What it typically includes">${desc}</td></tr>`).join('')}
-          </table>
-        </div>
-        <p class="note">Figures assume you own your home outright (no rent/mortgage) and exclude care costs.</p>
-      </details>
-    </article>`;
+      <div class="table-scroll">
+        <table class="reference-table">
+          <tr class="reference-table-head"><th>Standard</th><th>One-person</th><th>Two-person</th><th>What it typically includes</th></tr>
+          ${rows.map(([label, v, desc]) => `<tr><td>${label}</td><td data-label="One-person">${money(v.onePerson)}</td><td data-label="Two-person">${money(v.twoPerson)}</td><td data-label="What it typically includes">${desc}</td></tr>`).join('')}
+        </table>
+      </div>
+      <p class="note">Figures assume you own your home outright (no rent/mortgage) and exclude care costs.</p>
+    </details>`;
 }
 
 const GLOSSARY_TERMS = [
@@ -868,19 +869,16 @@ const GLOSSARY_TERMS = [
 
 function renderGlossaryPanel() {
   return `
-    <article class="panel">
-      <h2>Glossary</h2>
+    <details class="panel ref-panel">
+      <summary>Glossary (${GLOSSARY_TERMS.length} terms)</summary>
       <p class="note">This gets complex fast — use this as a quick reference.</p>
-      <details class="projection-details">
-        <summary>Show glossary (${GLOSSARY_TERMS.length} terms)</summary>
-        <div class="table-scroll">
-          <table class="reference-table">
-            <tr class="reference-table-head"><th>Term</th><th>What it means</th></tr>
-            ${GLOSSARY_TERMS.map(([term, def]) => `<tr><td>${term}</td><td data-label="What it means">${def}</td></tr>`).join('')}
-          </table>
-        </div>
-      </details>
-    </article>`;
+      <div class="table-scroll">
+        <table class="reference-table">
+          <tr class="reference-table-head"><th>Term</th><th>What it means</th></tr>
+          ${GLOSSARY_TERMS.map(([term, def]) => `<tr><td>${term}</td><td data-label="What it means">${def}</td></tr>`).join('')}
+        </table>
+      </div>
+    </details>`;
 }
 
 const ASSUMPTIONS_SOURCES = [
@@ -914,19 +912,16 @@ const ASSUMPTIONS_SOURCES = [
 
 function renderAssumptionsPanel() {
   return `
-    <article class="panel">
-      <h2>Assumptions &amp; Sources</h2>
+    <details class="panel ref-panel">
+      <summary>Assumptions &amp; Sources (${ASSUMPTIONS_SOURCES.length} rows)</summary>
       <p class="note">This model works entirely in TODAY’S MONEY (real terms). Every growth/revaluation rate is the rate ABOVE inflation, not the total nominal rate.</p>
-      <details class="projection-details">
-        <summary>Show assumptions table (${ASSUMPTIONS_SOURCES.length} rows)</summary>
-        <div class="table-scroll">
-          <table class="reference-table">
-            <tr class="reference-table-head"><th>Assumption</th><th>Default used</th><th>Source / note</th></tr>
-            ${ASSUMPTIONS_SOURCES.map(([a, d, s]) => `<tr><td>${a}</td><td data-label="Default used">${d}</td><td data-label="Source / note">${s}</td></tr>`).join('')}
-          </table>
-        </div>
-      </details>
-    </article>`;
+      <div class="table-scroll">
+        <table class="reference-table">
+          <tr class="reference-table-head"><th>Assumption</th><th>Default used</th><th>Source / note</th></tr>
+          ${ASSUMPTIONS_SOURCES.map(([a, d, s]) => `<tr><td>${a}</td><td data-label="Default used">${d}</td><td data-label="Source / note">${s}</td></tr>`).join('')}
+        </table>
+      </div>
+    </details>`;
 }
 
 // ---- Assumptions used (transparency panel) ----------------------------------
@@ -1031,36 +1026,40 @@ function focusField(name) {
 
 function renderAssumptionsUsedPanel(inputs, model) {
   const items = ASSUMPTIONS_USED.filter((a) => a.relevantWhen(inputs, model));
+  // "Edit this" only makes sense once the flow is done and the full form is on
+  // screen — during the wizard those fields are hidden or moved into step cards.
+  const showEdit = flowDone();
   return `
-    <article class="panel">
-      <h2>Assumptions used</h2>
-      <details class="projection-details assumptions-used-panel">
-        <summary>Show what's being assumed for you (${items.length})</summary>
-        <ul class="assumptions-used-list">
-          ${items.map((a) => `
-            <li class="assumptions-used-row">
-              <div class="assumptions-used-main">
-                <span class="assumptions-used-label">${a.label}</span>
-                <span class="assumptions-used-value">${a.format(inputs)}</span>
-              </div>
-              <p class="assumptions-used-rationale">${a.rationale}</p>
-              <button type="button" class="assumptions-used-edit" data-edit-field="${a.key}">Edit this</button>
-            </li>`).join('')}
-        </ul>
-      </details>
-    </article>`;
+    <details class="panel ref-panel assumptions-used-panel">
+      <summary>Assumptions used (${items.length})</summary>
+      <p class="note">The assumptions currently shaping your figures.${showEdit ? ' Use “Edit this” on any of them to change it.' : ''}</p>
+      <ul class="assumptions-used-list">
+        ${items.map((a) => `
+          <li class="assumptions-used-row">
+            <div class="assumptions-used-main">
+              <span class="assumptions-used-label">${a.label}</span>
+              <span class="assumptions-used-value">${a.format(inputs)}</span>
+            </div>
+            <p class="assumptions-used-rationale">${a.rationale}</p>
+            ${showEdit ? `<button type="button" class="assumptions-used-edit" data-edit-field="${a.key}">Edit this</button>` : ''}
+          </li>`).join('')}
+      </ul>
+    </details>`;
 }
 
-function renderAdvancedResults(model, inputs) {
+// The main results (scenario cards, target-income calculator, year-by-year detail).
+// Hidden mid-flow via body.guided-flow-active; shown once the wizard completes.
+function renderResults(model, inputs) {
   const scenarioCards = model.scenarioSummary.scenarios
     .map((s, i) => renderScenarioCard(s, i, model, inputs))
     .join('');
+  // Target-income calculator only once a target is set (via the wizard's target
+  // question), otherwise it's just an empty £0 table.
+  const targetPanel = inputs.targetIncome > 0 ? renderTargetIncome(model.targetIncomeCalculator) : '';
 
   resultsEl.innerHTML = `
     <section class="scenario-grid">${scenarioCards}</section>
-    ${renderAssumptionsUsedPanel(inputs, model)}
-    ${renderTargetIncome(model.targetIncomeCalculator)}
-    ${renderAnnualAllowance(model.annualAllowance)}
+    ${targetPanel}
     <article class="panel">
       <h2>Year-by-year detail</h2>
       ${renderProjectionTable('2015 CARE Projection', model.care.years, [
@@ -1072,10 +1071,20 @@ function renderAdvancedResults(model, inputs) {
         ['isa', 'ISA'], ['avc', 'AVC'], ['gia', 'GIA'], ['combinedTotal', 'Combined total'],
       ])}
     </article>
+    <p class="footer-note">Current age: ${model.personal.currentAge} · State Pension Age: ${model.personal.statePensionAge}</p>
+  `;
+}
+
+// The five reference/assumption sections. Unlike the results, these sit at the very
+// bottom of every page (during the wizard AND after), each collapsed by default, so
+// the glossary and assumptions are always a click away.
+function renderReferencePanels(model, inputs) {
+  referenceEl.innerHTML = `
+    ${renderAssumptionsUsedPanel(inputs, model)}
+    ${renderAnnualAllowance(model.annualAllowance)}
     ${renderRetirementLivingStandardsPanel(model)}
     ${renderGlossaryPanel()}
     ${renderAssumptionsPanel()}
-    <p class="footer-note">Current age: ${model.personal.currentAge} · State Pension Age: ${model.personal.statePensionAge}</p>
   `;
 }
 
@@ -1182,14 +1191,16 @@ function update() {
   const inputs = readInputs();
   const model = CalcEngine.runModel(inputs, new Date());
   renderHeadlineBar(model, inputs);
-  renderAdvancedResults(model, inputs);
+  renderResults(model, inputs);
+  renderReferencePanels(model, inputs);
   saveFormToStorage();
 }
 
 form.addEventListener('input', update);
 form.addEventListener('change', update);
 
-resultsEl.addEventListener('click', (e) => {
+// The "Edit this" buttons now live in the always-on reference panels at the bottom.
+referenceEl.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-edit-field]');
   if (btn) focusField(btn.dataset.editField);
 });
@@ -1214,7 +1225,7 @@ document.getElementById('clearDataBtn').addEventListener('click', () => {
 let detailsOpenedForPrint = [];
 window.addEventListener('beforeprint', () => {
   detailsOpenedForPrint = Array.from(
-    document.querySelectorAll('#results details.assumptions-used-panel:not([open])')
+    document.querySelectorAll('details.assumptions-used-panel:not([open])')
   );
   detailsOpenedForPrint.forEach((d) => { d.open = true; });
 });
