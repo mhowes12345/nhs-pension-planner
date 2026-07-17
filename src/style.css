@@ -72,9 +72,27 @@ body {
    min-content size and can force the whole grid wider than the viewport. Override so
    the tracks can actually shrink to the available space and let overflow-x:auto
    wrappers (.table-scroll) do the clipping instead. */
-.inputs-panel, .results-panel {
+.inputs-panel, .results-panel, .main-panel {
   min-width: 0;
 }
+.main-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* While the guided flow is in progress it owns the main area: the inputs column
+   and results are hidden, and the wizard sits centred under the sticky headline.
+   Both reappear the moment the flow completes ("all can be shown"). */
+body.guided-flow-active .app-layout { grid-template-columns: 1fr; }
+body.guided-flow-active .inputs-panel { display: none; }
+body.guided-flow-active .results-panel { display: none; }
+.guided-wizard {
+  width: 100%;
+  max-width: 44rem;
+  margin: 0 auto;
+}
+.guided-wizard:empty { display: none; }
 .inputs-panel {
   display: flex;
   flex-direction: column;
@@ -139,9 +157,16 @@ body {
   }
 }
 
+.top-bar {
+  padding: 0.8rem 1rem 0;
+  display: flex;
+  justify-content: center;
+}
 .mode-toggle {
   display: flex;
   gap: 0.4rem;
+  width: 100%;
+  max-width: 24rem;
 }
 .mode-toggle-btn {
   flex: 1;
@@ -307,6 +332,23 @@ body {
   border: 1px solid rgba(0,127,59,0.25);
   border-radius: 8px;
 }
+/* Real form fields moved into the active step card. On wider screens the fields
+   flow into two columns; moved whole sections (old pensions, scenarios) span full
+   width via their own block layout. */
+.wizard-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  column-gap: 1rem;
+  align-items: start;
+}
+.wizard-fields:not(:empty) {
+  margin-bottom: 0.7rem;
+}
+.wizard-fields fieldset,
+.wizard-fields details.input-section {
+  grid-column: 1 / -1;
+}
+
 .wizard-nav {
   display: flex;
   justify-content: space-between;

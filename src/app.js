@@ -191,8 +191,6 @@ try {
 // populated by the wizard below, based on the user's answers so far.
 function applyGuidedVisibility() {
   const guided = currentMode === 'guided';
-  const intro = document.getElementById('guidedIntro');
-  if (intro) intro.style.display = guided ? '' : 'none';
   form.querySelectorAll('fieldset, details.input-section').forEach((container) => {
     const labels = Array.from(container.querySelectorAll('label'));
     if (!guided) {
@@ -265,6 +263,13 @@ document.querySelectorAll('.mode-toggle-btn').forEach((btn) => {
 const WIZARD_KEY = 'nhsPensionPlanner:wizard';
 
 const WIZARD_STEPS = [
+  {
+    id: 'quickstart',
+    type: 'fields',
+    question: 'First, three quick figures',
+    help: 'These are all it takes to see your projected retirement income. Most are on your NHS pension statement — log in to the My NHS Pension portal at mynhspension.nhsbsa.nhs.uk if you have it handy, and use the “Where do I find this?” links below each field.',
+    revealFields: ['dateOfBirth', 'currentPensionablePay', 'carePotLastStatement', 'carePotStatementTaxYearEnd'],
+  },
   {
     id: 'legacy',
     question: 'Do you have NHS service from before 2015?',
@@ -414,58 +419,121 @@ function answerWizardStep(stepId, answer) {
   saveWizardState();
 }
 
+// Fields shown inside the active wizard card are the REAL form fields, physically
+// moved into the card (a copy with the same name would break form.elements and the
+// shared state guarantee). Every move is recorded so the nodes can be restored to
+// their exact original spots on step change, mode switch, or flow completion.
+const movedNodes = [];
+
+function restoreMovedNodes() {
+  // Reverse order: nodes were recorded in document order, so each node's stored
+  // next-sibling is either an unmoved node or one restored earlier in this pass.
+  for (let i = movedNodes.length - 1; i >= 0; i--) {
+    const { node, parent, next } = movedNodes[i];
+    parent.insertBefore(node, next);
+  }
+  movedNodes.length = 0;
+}
+
+function moveNodeToWizard(node, target) {
+  movedNodes.push({ node, parent: node.parentNode, next: node.nextSibling });
+  target.appendChild(node);
+  node.style.display = '';
+}
+
+// update() runs on every keystroke; rebuilding the wizard card then would rip the
+// field the user is typing in out of the DOM and destroy focus. The card only
+// actually re-renders when something structural changes.
+let lastWizardKey = null;
+
 function renderWizard() {
   const wizardEl = document.getElementById('guidedWizard');
+  const steps = activeWizardSteps();
+  const idx = Math.min(wizardState.step, steps.length);
+  const done = idx >= steps.length;
+  const step = done ? null : steps[idx];
+  const current = step ? wizardState.answers[step.id] : '';
+
+  // While the guided flow is in progress the inputs column and results are hidden
+  // (CSS on this class) — the flow owns the main area. Both reappear on completion.
+  document.body.classList.toggle('guided-flow-active', currentMode === 'guided' && !done);
+
+  const key = [currentMode, idx, done, current, steps.length].join('|');
+  if (key === lastWizardKey) return;
+  lastWizardKey = key;
+
+  restoreMovedNodes();
+
   if (currentMode !== 'guided') {
     wizardEl.innerHTML = '';
     return;
   }
 
-  const steps = activeWizardSteps();
-  const idx = Math.min(wizardState.step, steps.length);
-  const done = idx >= steps.length;
-
   if (done) {
-    const answeredCount = steps.filter((s) => wizardState.answers[s.id]).length;
     wizardEl.innerHTML = `
       <div class="wizard-card wizard-done">
-        <p class="wizard-done-msg">That's everything — your projection above reflects all ${answeredCount} answers.</p>
+        <p class="wizard-done-msg">That's everything — your full picture is below, and every figure you entered is now shown on the left. Adjust anything and the results update instantly.</p>
         <div class="wizard-nav">
           <button type="button" class="wizard-btn wizard-back" data-wizard-nav="back">&larr; Back</button>
           <button type="button" class="wizard-btn wizard-restart" data-wizard-nav="restart">Start again</button>
         </div>
-        <p class="hint">Want full control of every number? Switch to <strong>Advanced (full form)</strong> at the top.</p>
+        <p class="hint">Want full control of every number and assumption? Switch to <strong>Advanced (full form)</strong> at the top.</p>
       </div>`;
     return;
   }
 
-  const step = steps[idx];
-  const current = wizardState.answers[step.id];
+  const isFieldStep = step.type === 'fields';
   const showNotSureExplainer = current === 'notsure' && step.notSureExplainer;
-  const answered = Boolean(current);
-  const revealed = current === 'yes' && ((step.revealFields || []).length > 0 || (step.revealContainers || []).length > 0);
+  const answered = isFieldStep || Boolean(current);
+  const showFields = isFieldStep || current === 'yes';
 
   const answerBtn = (value, label) => `
     <button type="button" class="wizard-answer ${current === value ? 'selected' : ''}" data-wizard-answer="${value}">${label}</button>`;
 
   wizardEl.innerHTML = `
     <div class="wizard-card">
-      <div class="wizard-progress">Question ${idx + 1} of ${steps.length}</div>
+      <div class="wizard-progress">Step ${idx + 1} of ${steps.length}</div>
       <p class="wizard-question">${step.question}</p>
       <p class="wizard-help">${step.help}</p>
-      <div class="wizard-answers">
-        ${answerBtn('yes', 'Yes')}
-        ${answerBtn('no', 'No')}
-        ${step.notSure ? answerBtn('notsure', 'Not sure') : ''}
-      </div>
+      ${isFieldStep ? '' : `
+        <div class="wizard-answers">
+          ${answerBtn('yes', 'Yes')}
+          ${answerBtn('no', 'No')}
+          ${step.notSure ? answerBtn('notsure', 'Not sure') : ''}
+        </div>`}
       ${showNotSureExplainer ? `<p class="wizard-notsure-explainer">${step.notSureExplainer}</p>` : ''}
-      ${revealed ? `<p class="wizard-reveal-note">New fields have appeared above — fill them in, then carry on.</p>` : ''}
+      <div class="wizard-fields"></div>
       <div class="wizard-nav">
         <button type="button" class="wizard-btn wizard-back" data-wizard-nav="back" ${idx === 0 ? 'disabled' : ''}>&larr; Back</button>
         <button type="button" class="wizard-btn wizard-next" data-wizard-nav="next">${answered ? 'Next &rarr;' : 'Skip &rarr;'}</button>
       </div>
       <button type="button" class="wizard-skip-all" data-wizard-nav="finish">I'm done — show my results</button>
     </div>`;
+
+  if (showFields) {
+    const target = wizardEl.querySelector('.wizard-fields');
+    const names = new Set(step.revealFields || []);
+    // Iterate labels in document order (not revealFields order) so restoration
+    // puts consecutive siblings back correctly. Each label + its "Where do I find
+    // this?" expander share a throwaway wrapper so they occupy one grid cell —
+    // restoration tracks original parents, so the wrapper needs no cleanup.
+    Array.from(form.querySelectorAll('.inputs-panel label')).forEach((label) => {
+      const input = label.querySelector('[name]');
+      if (!input || !names.has(input.name)) return;
+      const cell = document.createElement('div');
+      cell.className = 'wizard-field-cell';
+      target.appendChild(cell);
+      moveNodeToWizard(label, cell);
+      const help = form.querySelector(`.trs-help[data-trs-for="${input.name}"]`);
+      if (help) moveNodeToWizard(help, cell);
+    });
+    (step.revealContainers || []).forEach((id) => {
+      const container = document.getElementById(id);
+      if (!container) return;
+      moveNodeToWizard(container, target);
+      if (container.tagName === 'DETAILS') container.open = true;
+    });
+  }
 }
 
 document.getElementById('guidedWizard').addEventListener('click', (e) => {
@@ -483,14 +551,26 @@ document.getElementById('guidedWizard').addEventListener('click', (e) => {
   if (nav === 'back') {
     wizardState.step = Math.max(0, wizardState.step - 1);
   } else if (nav === 'next') {
-    // An unanswered question skipped with Next defaults to the most common answer: No.
+    // An unanswered question skipped with Next defaults to the most common answer:
+    // No. Field-only steps (the quick start) have no yes/no — Next just completes them.
     const steps = activeWizardSteps();
     const step = steps[wizardState.step];
-    if (step && !wizardState.answers[step.id]) answerWizardStep(step.id, 'no');
+    if (step && !wizardState.answers[step.id]) {
+      answerWizardStep(step.id, step.type === 'fields' ? 'yes' : 'no');
+    }
     wizardState.step += 1;
   } else if (nav === 'finish') {
     wizardState.step = activeWizardSteps().length;
   } else if (nav === 'restart') {
+    // Downgrade every Yes answer first so the fields it revealed reset to their
+    // defaults — otherwise values typed during the previous run would keep feeding
+    // the projection invisibly. Quick-start figures (the fields-type step) are kept:
+    // they're visible again on step 1, so nothing is hidden.
+    WIZARD_STEPS.forEach((step) => {
+      if (step.type !== 'fields' && wizardState.answers[step.id] === 'yes') {
+        answerWizardStep(step.id, 'no');
+      }
+    });
     wizardState = { step: 0, answers: {} };
     form.elements.legacyContinuousService.value = 'Yes';
     form.elements.isHighEarner.value = 'No';
@@ -1172,14 +1252,14 @@ form.addEventListener('focusout', () => hideTooltip());
 // ---- update loop --------------------------------------------------------------
 
 function update() {
-  // Order matters: wizard answers determine which fields are revealed, guided-mode
-  // visibility then hides/shows whole fieldsets, and conditional-field visibility
-  // (DB/DC subfields etc.) refines within whatever is currently shown — reversed,
-  // advanced mode's reset would clobber the conditionals.
+  // Order matters: wizard answers determine which fields are revealed; the wizard
+  // renders next (restoring/moving field nodes, so the DOM is settled); guided-mode
+  // visibility then hides/shows whole fieldsets; and conditional-field visibility
+  // (DB/DC subfields etc.) refines within whatever is currently shown.
   recomputeRevealed();
+  renderWizard();
   applyGuidedVisibility();
   refreshConditionalFields();
-  renderWizard();
   const inputs = readInputs();
   const model = CalcEngine.runModel(inputs, new Date());
   const headlineModel = currentMode === 'guided' ? buildHeadlineModel(inputs, model) : null;
