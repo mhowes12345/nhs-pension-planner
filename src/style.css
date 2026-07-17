@@ -349,6 +349,33 @@ body.guided-flow-active .results-panel { display: none; }
   grid-column: 1 / -1;
 }
 
+/* Grouped in-card fields (e.g. SIPP / LISA / S&S ISA / GIA on the private-savings
+   step): each group spans the full card width with its own header and inner grid. */
+.wizard-field-group {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--panel-border);
+  padding-top: 0.55rem;
+  margin-bottom: 0.35rem;
+}
+.wizard-field-group:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+.wizard-group-title {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.5rem;
+}
+.wizard-group-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  column-gap: 1rem;
+  align-items: start;
+}
+
 .wizard-nav {
   display: flex;
   justify-content: space-between;

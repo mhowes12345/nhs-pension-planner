@@ -295,9 +295,16 @@ const WIZARD_STEPS = [
   {
     id: 'private',
     question: 'Do you pay into a private pension or ISA?',
-    help: 'A SIPP (a private pension you run yourself), Lifetime ISA, Stocks & Shares ISA, or a GIA (a general investment account — taxable investments held outside a pension or ISA). Anything you’re saving for retirement beyond the NHS scheme.',
+    help: 'A SIPP (a private pension you run yourself), Lifetime ISA, Stocks & Shares ISA, or a GIA (a general investment account — taxable investments held outside a pension or ISA). Anything you’re saving for retirement beyond the NHS scheme. Only fill in the ones you have — leave the rest at 0.',
     notSure: false,
     revealFields: ['sippBalance', 'sippContribution', 'sippGrowthRate', 'lisaBalance', 'lisaContribution', 'lisaGrowthRate', 'isaBalance', 'isaContribution', 'isaGrowthRate', 'giaBalance', 'giaContribution', 'giaGrowthRateGross', 'marginalTaxBand'],
+    // Presentation only: in-card fields grouped under one header per vehicle.
+    fieldGroups: [
+      { title: 'SIPP', fields: ['sippBalance', 'sippContribution', 'sippGrowthRate'] },
+      { title: 'Lifetime ISA (LISA)', fields: ['lisaBalance', 'lisaContribution', 'lisaGrowthRate'] },
+      { title: 'Stocks & Shares ISA', fields: ['isaBalance', 'isaContribution', 'isaGrowthRate'] },
+      { title: 'General Investment Account (GIA)', fields: ['giaBalance', 'giaContribution', 'giaGrowthRateGross', 'marginalTaxBand'] },
+    ],
   },
   {
     id: 'apAvc',
@@ -512,21 +519,34 @@ function renderWizard() {
 
   if (showFields) {
     const target = wizardEl.querySelector('.wizard-fields');
-    const names = new Set(step.revealFields || []);
-    // Iterate labels in document order (not revealFields order) so restoration
-    // puts consecutive siblings back correctly. Each label + its "Where do I find
+    // Iterate labels in document order (not list order) so restoration puts
+    // consecutive siblings back correctly. Each label + its "Where do I find
     // this?" expander share a throwaway wrapper so they occupy one grid cell —
     // restoration tracks original parents, so the wrapper needs no cleanup.
-    Array.from(form.querySelectorAll('.inputs-panel label')).forEach((label) => {
-      const input = label.querySelector('[name]');
-      if (!input || !names.has(input.name)) return;
-      const cell = document.createElement('div');
-      cell.className = 'wizard-field-cell';
-      target.appendChild(cell);
-      moveNodeToWizard(label, cell);
-      const help = form.querySelector(`.trs-help[data-trs-for="${input.name}"]`);
-      if (help) moveNodeToWizard(help, cell);
-    });
+    const moveFieldsInto = (fieldNames, container) => {
+      const names = new Set(fieldNames);
+      Array.from(form.querySelectorAll('.inputs-panel label')).forEach((label) => {
+        const input = label.querySelector('[name]');
+        if (!input || !names.has(input.name)) return;
+        const cell = document.createElement('div');
+        cell.className = 'wizard-field-cell';
+        container.appendChild(cell);
+        moveNodeToWizard(label, cell);
+        const help = form.querySelector(`.trs-help[data-trs-for="${input.name}"]`);
+        if (help) moveNodeToWizard(help, cell);
+      });
+    };
+    if (step.fieldGroups) {
+      step.fieldGroups.forEach((group) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'wizard-field-group';
+        wrap.innerHTML = `<div class="wizard-group-title">${group.title}</div><div class="wizard-group-fields"></div>`;
+        target.appendChild(wrap);
+        moveFieldsInto(group.fields, wrap.querySelector('.wizard-group-fields'));
+      });
+    } else {
+      moveFieldsInto(step.revealFields || [], target);
+    }
     (step.revealContainers || []).forEach((id) => {
       const container = document.getElementById(id);
       if (!container) return;
