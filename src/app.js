@@ -1194,4 +1194,33 @@ resultsEl.addEventListener('click', (e) => {
   if (btn) focusField(btn.dataset.editField);
 });
 
+// ---- clear my data ----------------------------------------------------------
+// Everything lives in localStorage; this wipes it (figures, wizard progress) for
+// people on shared or practice computers, then reloads to a fresh start.
+
+document.getElementById('clearDataBtn').addEventListener('click', () => {
+  const ok = window.confirm('This clears everything you\'ve entered from this browser and starts fresh. Continue?');
+  if (!ok) return;
+  try { localStorage.clear(); } catch (e) {}
+  window.location.reload();
+});
+
+// ---- printing ---------------------------------------------------------------
+// The print stylesheet flattens the page to the results. Closed <details> print
+// as just their summary line, so pop open the "Assumptions used" panel (short,
+// and the thing an adviser will ask about) for the duration of the print; the
+// long year-by-year and reference tables stay collapsed to keep printouts short.
+
+let detailsOpenedForPrint = [];
+window.addEventListener('beforeprint', () => {
+  detailsOpenedForPrint = Array.from(
+    document.querySelectorAll('#results details.assumptions-used-panel:not([open])')
+  );
+  detailsOpenedForPrint.forEach((d) => { d.open = true; });
+});
+window.addEventListener('afterprint', () => {
+  detailsOpenedForPrint.forEach((d) => { d.open = false; });
+  detailsOpenedForPrint = [];
+});
+
 update();

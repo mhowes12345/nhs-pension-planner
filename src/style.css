@@ -34,6 +34,12 @@ body {
 .app-header-text { flex: 1; min-width: 0; }
 .app-header h1 { margin: 0 0 0.3rem; font-size: 1.3rem; color: var(--accent); }
 .disclaimer { margin: 0; color: var(--text-dim); font-size: 0.85rem; max-width: 60rem; }
+.privacy-note {
+  margin: 0.3rem 0 0;
+  color: var(--ok);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
 
 .kofi-button {
   display: inline-flex;
@@ -60,6 +66,20 @@ body {
   text-align: center;
   border-top: 1px solid var(--panel-border);
 }
+.footer-privacy {
+  margin: 0.9rem 0 0.4rem;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+.clear-data-btn {
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.clear-data-btn:hover { color: var(--below); }
 
 .app-layout {
   display: grid;
@@ -797,4 +817,32 @@ label[data-note] {
   color: var(--text-dim);
   font-size: 0.78rem;
   text-align: center;
+}
+
+/* ---- print ----------------------------------------------------------------
+   Flatten to the results: hide inputs, wizard, and chrome; un-stick the
+   headline bar; keep each card on one page. Closed <details> print as just
+   their summary line (app.js opens the short "Assumptions used" panel for the
+   duration of the print). */
+@media print {
+  .app-header .kofi-button,
+  .app-footer,
+  #guidedWizard,
+  .inputs-panel,
+  .assumptions-used-edit,
+  .field-tooltip {
+    display: none !important;
+  }
+  /* Results are hidden mid-flow on screen — always print them. */
+  body.guided-flow-active .results-panel { display: flex; }
+  .app-layout {
+    display: block;
+    padding: 0.5rem 0;
+  }
+  .guided-headline-bar {
+    position: static;
+    border-bottom: none;
+  }
+  body { background: #fff; }
+  .scenario-card, .panel { break-inside: avoid; }
 }
