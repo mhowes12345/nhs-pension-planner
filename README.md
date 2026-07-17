@@ -4,7 +4,7 @@ A client-side retirement income calculator for NHS pension members, combining th
 
 Opens as a **guided flow**: three inputs (date of birth, pensionable pay, and the pension figure from your NHS statement) produce immediate headline projections — the three retirement-age scenarios, pinned at the top and minimised to just their totals — then a short question-by-question flow collects further figures only where they apply, with "Where do I find this?" pointers to the exact lines on your Total Reward Statement / NHSBSA estimate. Completing (or skipping out of) the flow reveals the full form with every input and assumption editable, plus the fully expanded results.
 
-Live app: https://mhowes12345.github.io/nhs-pension-planner/
+Live app: https://nhspensionplanner.co.uk/
 
 **This is a projection tool, not financial advice.** Figures are based on the assumptions you enter — see the Assumptions & Sources section in the app for defaults and sources. Speak to a regulated financial adviser before making retirement decisions.
 
