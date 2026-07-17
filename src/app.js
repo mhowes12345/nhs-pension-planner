@@ -167,33 +167,24 @@ function refreshConditionalFields() {
   });
 }
 
-// ---- guided / advanced mode -------------------------------------------------
-// Guided mode is the default onboarding view: only the 3 quick-start fields are
-// shown at first, everything else takes its HTML default until a later guided
-// stage (or Advanced mode) surfaces it. Both modes read/write the exact same
-// <form> — nothing is duplicated, so switching modes never loses or diverges data.
+// ---- guided flow visibility -------------------------------------------------
+// The guided wizard is the only entry path: during the flow the inputs column is
+// hidden and each step's fields appear inside the step card. Completing (or
+// skipping out of) the flow reveals the FULL form — every field and assumption,
+// nothing held back — so no separate "advanced mode" is needed.
 
-const MODE_KEY = 'nhsPensionPlanner:mode';
 const GUIDED_QUICKSTART_FIELDS = ['dateOfBirth', 'currentPensionablePay', 'carePotLastStatement', 'carePotStatementTaxYearEnd'];
 
-let currentMode = 'guided';
-try {
-  const storedMode = localStorage.getItem(MODE_KEY);
-  if (storedMode === 'advanced' || storedMode === 'guided') currentMode = storedMode;
-} catch (e) {
-  // storage unavailable — default to guided
-}
-
 // A fieldset/details block that contains ONLY quick-start/wizard-revealed fields is
-// left alone in guided mode; one that contains a MIX (e.g. "Personal" also has tax-
+// left alone during the flow; one that contains a MIX (e.g. "Personal" also has tax-
 // year/State-Pension fields) stays visible with just its non-relevant labels hidden;
-// one with NO relevant fields is hidden entirely. guidedRevealedFields/Containers are
-// populated by the wizard below, based on the user's answers so far.
+// one with NO relevant fields is hidden entirely. Once the flow is done, everything
+// shows. guidedRevealedFields/Containers are populated by the wizard below.
 function applyGuidedVisibility() {
-  const guided = currentMode === 'guided';
+  const showEverything = flowDone();
   form.querySelectorAll('fieldset, details.input-section').forEach((container) => {
     const labels = Array.from(container.querySelectorAll('label'));
-    if (!guided) {
+    if (showEverything) {
       container.style.display = '';
       labels.forEach((l) => { l.style.display = ''; });
       return;
@@ -222,35 +213,16 @@ function applyGuidedVisibility() {
     const label = el && el.closest('label');
     help.style.display = label && label.style.display !== 'none' ? '' : 'none';
   });
-  // §5 copy pass: labels carrying data-guided-label show plain-English wording in
-  // guided mode ("growth above inflation" instead of "REAL", no unexplained CARE/
-  // TRS jargon) while Advanced keeps the original technical labels. Only the
-  // label's leading text node is swapped — the input inside is untouched.
+  // §5 copy pass: labels carrying data-guided-label always show the plain-English
+  // wording ("growth above inflation" instead of "REAL"); the original technical
+  // phrasing lives on in the hover tooltips (data-note). Only the label's leading
+  // text node is swapped — the input inside is untouched.
   form.querySelectorAll('label[data-guided-label]').forEach((label) => {
     const textNode = label.firstChild;
     if (!textNode || textNode.nodeType !== Node.TEXT_NODE) return;
-    if (!label.dataset.advancedLabel) label.dataset.advancedLabel = textNode.nodeValue;
-    textNode.nodeValue = guided ? label.dataset.guidedLabel : label.dataset.advancedLabel;
+    textNode.nodeValue = label.dataset.guidedLabel;
   });
 }
-
-function setMode(mode) {
-  currentMode = mode;
-  try { localStorage.setItem(MODE_KEY, mode); } catch (e) {}
-  document.querySelectorAll('.mode-toggle-btn').forEach((btn) => {
-    const active = btn.dataset.mode === mode;
-    btn.classList.toggle('active', active);
-    btn.setAttribute('aria-pressed', String(active));
-  });
-  update();
-}
-
-document.querySelectorAll('.mode-toggle-btn').forEach((btn) => {
-  btn.addEventListener('click', () => setMode(btn.dataset.mode));
-  const active = btn.dataset.mode === currentMode;
-  btn.classList.toggle('active', active);
-  btn.setAttribute('aria-pressed', String(active));
-});
 
 // ---- guided wizard (progressive disclosure, §2 of the rework brief) ---------
 // One plain-English question at a time, Next/Back, each defaulting to the most
@@ -378,6 +350,10 @@ function activeWizardSteps() {
   return WIZARD_STEPS.filter((s) => !s.onlyIf || s.onlyIf(wizardState.answers));
 }
 
+function flowDone() {
+  return wizardState.step >= activeWizardSteps().length;
+}
+
 const guidedRevealedFields = new Set();
 const guidedRevealedContainers = new Set();
 
@@ -463,28 +439,22 @@ function renderWizard() {
 
   // While the guided flow is in progress the inputs column and results are hidden
   // (CSS on this class) — the flow owns the main area. Both reappear on completion.
-  document.body.classList.toggle('guided-flow-active', currentMode === 'guided' && !done);
+  document.body.classList.toggle('guided-flow-active', !done);
 
-  const key = [currentMode, idx, done, current, steps.length].join('|');
+  const key = [idx, done, current, steps.length].join('|');
   if (key === lastWizardKey) return;
   lastWizardKey = key;
 
   restoreMovedNodes();
 
-  if (currentMode !== 'guided') {
-    wizardEl.innerHTML = '';
-    return;
-  }
-
   if (done) {
     wizardEl.innerHTML = `
       <div class="wizard-card wizard-done">
-        <p class="wizard-done-msg">That's everything — your full picture is below, and every figure you entered is now shown on the left. Adjust anything and the results update instantly.</p>
+        <p class="wizard-done-msg">That's everything — your full picture is below, and every input and assumption is now shown on the left. Adjust anything and the results update instantly.</p>
         <div class="wizard-nav">
           <button type="button" class="wizard-btn wizard-back" data-wizard-nav="back">&larr; Back</button>
           <button type="button" class="wizard-btn wizard-restart" data-wizard-nav="restart">Start again</button>
         </div>
-        <p class="hint">Want full control of every number and assumption? Switch to <strong>Advanced (full form)</strong> at the top.</p>
       </div>`;
     return;
   }
@@ -693,48 +663,6 @@ function readInputs() {
 
     householdType: str('householdType'),
   };
-}
-
-// ---- guided headline (two derived ages) -------------------------------------
-// The headline reuses the exact same engine call as the scenario grid — inputs.scenarios
-// is just a list the engine maps over, not hardcoded to 3 — so no engine change is needed:
-// we just build a 2-entry scenarios list (retire = claim, at each headline age) and call
-// runModel a second time on that.
-
-function normalMinimumPensionAge(asOfDate) {
-  return asOfDate >= new Date('2028-04-06') ? 57 : 55;
-}
-
-// Starts as [min private-pension access age, State Pension Age] — the only two ages
-// derivable from the 3 quick-start fields alone. Once legacy service is entered (via a
-// later guided stage, or Advanced mode), swaps to the member's real NPAs (60 for 1995
-// Section, 65 for 2008 Section) so the headline sharpens as more is disclosed.
-// Ages already behind the member are clamped up to their current age (the engine's
-// projections start there — a past age would render "n/a"), and if the two ages then
-// collapse into one (e.g. a member already past State Pension Age), one age is shown.
-function computeHeadlineAges(inputs, model) {
-  const hasSection1995 = inputs.legacy1995Pension > 0 || inputs.legacy1995LumpSum > 0;
-  const hasSection2008 = inputs.legacy2008Pension > 0 || inputs.legacy2008LumpSum > 0;
-  const spa = model.personal.statePensionAge;
-
-  let ages;
-  if (hasSection1995 && hasSection2008) ages = [60, 65];
-  else if (hasSection1995) ages = [60, spa];
-  else if (hasSection2008) ages = [65, spa];
-  else ages = [normalMinimumPensionAge(new Date()), spa];
-
-  const minAge = model.personal.currentAge;
-  ages = ages.map((a) => Math.max(a, minAge));
-  return ages[0] >= ages[1] ? [ages[0]] : ages;
-}
-
-function buildHeadlineModel(inputs, model) {
-  const ages = computeHeadlineAges(inputs, model);
-  const headlineInputs = {
-    ...inputs,
-    scenarios: ages.map((age) => ({ retirementAge: age, nhsClaimAge: age })),
-  };
-  return CalcEngine.runModel(headlineInputs, new Date());
 }
 
 // ---- formatting -------------------------------------------------------------
@@ -1091,10 +1019,8 @@ const ASSUMPTIONS_USED = [
 function focusField(name) {
   const el = form.elements[name];
   if (!el) return;
-  // Advanced-only assumption fields (SIPP growth, legacy growth rate, etc.) aren't
-  // part of the guided quick-start, so they're hidden in Guided mode — jump to
-  // Advanced mode first so the "Edit this" control actually lands somewhere visible.
-  if (currentMode !== 'advanced') setMode('advanced');
+  // Results (and this panel's "Edit this" buttons) are only visible once the flow
+  // is done, at which point the full form is shown — every field is reachable.
   const details = el.closest('details');
   if (details && !details.open) details.open = true;
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1153,19 +1079,13 @@ function renderAdvancedResults(model, inputs) {
   `;
 }
 
-// Headline: two derived ages, income if you stop work and claim NHS pension at the
-// same age. No scenario comparison, no tables — see §6 of the guided-rework brief:
-// "lead with the headline number(s), not a table." Lives in its own sticky bar
-// (#guidedHeadlineBar, outside the two-column layout) rather than inside #results,
-// so it stays pinned above the wizard as the user scrolls through it — on mobile in
-// particular, the input/results columns stack and neither is otherwise sticky.
-function renderGuidedHeadlineBar(headlineModel, inputs) {
+// Persistent headline: the three scenario cards, minimised to just their heading
+// and total income figure. Shown from the very start and pinned in a sticky bar
+// (#guidedHeadlineBar, outside the two-column layout) so the figures visibly
+// update as the user works through the wizard; the full detailed cards appear in
+// the results area once the flow completes.
+function renderHeadlineBar(model, inputs) {
   const bar = document.getElementById('guidedHeadlineBar');
-  if (currentMode !== 'guided') {
-    bar.style.display = 'none';
-    return;
-  }
-  bar.style.display = '';
   // Before any money has been entered the projection is a bare £0 — invite the
   // input instead of celebrating a meaningless number.
   if (inputs.currentPensionablePay === 0 && inputs.carePotLastStatement === 0) {
@@ -1178,48 +1098,27 @@ function renderGuidedHeadlineBar(headlineModel, inputs) {
       </section>`;
     return;
   }
-  const items = headlineModel.scenarioSummary.scenarios.map((s) => `
+  const items = model.scenarioSummary.scenarios.map((s, i) => {
+    const label = ['A', 'B', 'C'][i] || String(i + 1);
+    const heading = s.bridgeYears > 0
+      ? `${label} — retire ${s.retirementAge}, claim ${s.nhsClaimAge}`
+      : `${label} — age ${s.retirementAge}`;
+    const total = s.totalIncomeFromClaimAge;
+    const amount = Number.isFinite(total)
+      ? `${money(total)}<span>/yr</span>`
+      : `<span class="headline-na">age already passed</span>`;
+    return `
     <div class="headline-item">
-      <div class="headline-age">From age ${s.retirementAge}${s.retirementAge === headlineModel.personal.currentAge ? ' (now)' : ''}</div>
-      <div class="headline-amount">${money(s.totalIncomeFromClaimAge)}<span>/yr</span></div>
-    </div>`).join('');
+      <div class="headline-age">Scenario ${heading}</div>
+      <div class="headline-amount">${amount}</div>
+    </div>`;
+  }).join('');
   const caveat = anyNotSure()
     ? `<p class="headline-note headline-caveat">This may be incomplete — you answered "Not sure" to something that could change it. Come back and update it once you know.</p>`
     : `<p class="headline-note">In today's money, based on what you've told us so far.</p>`;
   bar.innerHTML = `
     <section class="headline-panel">${items}</section>
     ${caveat}`;
-}
-
-function renderGuidedResults(model, inputs) {
-  // Scenario comparison only appears once the user has asked for it via the wizard
-  // (§6: "Show scenario comparison only when the user has asked for it").
-  const wantsComparison = wizardState.answers.compareAges === 'yes';
-  const scenarioCards = wantsComparison
-    ? `<section class="scenario-grid">${model.scenarioSummary.scenarios
-        .map((s, i) => renderScenarioCard(s, i, model, inputs)).join('')}</section>`
-    : '';
-  // The target-income fields aren't part of the guided flow, so with no target set
-  // the calculator would just render an empty £0 table — show it only once a target
-  // exists (set via Advanced mode).
-  const targetPanel = inputs.targetIncome > 0 ? renderTargetIncome(model.targetIncomeCalculator) : '';
-  resultsEl.innerHTML = `
-    ${scenarioCards}
-    ${renderAssumptionsUsedPanel(inputs, model)}
-    ${targetPanel}
-    ${renderRetirementLivingStandardsPanel(model)}
-    ${renderGlossaryPanel()}
-    ${renderAssumptionsPanel()}
-  `;
-}
-
-function render(model, headlineModel, inputs) {
-  renderGuidedHeadlineBar(headlineModel, inputs);
-  if (currentMode === 'guided') {
-    renderGuidedResults(model, inputs);
-  } else {
-    renderAdvancedResults(model, inputs);
-  }
 }
 
 // ---- field notes (hover tooltips) ------------------------------------------
@@ -1282,8 +1181,8 @@ function update() {
   refreshConditionalFields();
   const inputs = readInputs();
   const model = CalcEngine.runModel(inputs, new Date());
-  const headlineModel = currentMode === 'guided' ? buildHeadlineModel(inputs, model) : null;
-  render(model, headlineModel, inputs);
+  renderHeadlineBar(model, inputs);
+  renderAdvancedResults(model, inputs);
   saveFormToStorage();
 }
 

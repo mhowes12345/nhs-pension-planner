@@ -157,33 +157,6 @@ body.guided-flow-active .results-panel { display: none; }
   }
 }
 
-.top-bar {
-  padding: 0.8rem 1rem 0;
-  display: flex;
-  justify-content: center;
-}
-.mode-toggle {
-  display: flex;
-  gap: 0.4rem;
-  width: 100%;
-  max-width: 24rem;
-}
-.mode-toggle-btn {
-  flex: 1;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid var(--accent);
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--accent);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.mode-toggle-btn.active {
-  background: var(--accent);
-  color: var(--panel);
-}
-
 /* Sticky bar wrapping the guided headline — pinned to the viewport top so the
    number stays visible (and visibly updates) while the user works through the
    wizard, which is the §2 "results update live" motivator. */
@@ -210,17 +183,23 @@ body.guided-flow-active .results-panel { display: none; }
 }
 .headline-item {
   flex: 1;
-  min-width: 10rem;
+  min-width: 8rem;
 }
 .headline-age {
-  font-size: 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 600;
   color: var(--text-dim);
   margin-bottom: 0.3rem;
 }
 .headline-amount {
-  font-size: 1.7rem;
+  font-size: 1.45rem;
   font-weight: 700;
   color: var(--accent);
+}
+.headline-na {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text-dim);
 }
 .headline-amount span {
   font-size: 0.9rem;
@@ -258,9 +237,9 @@ body.guided-flow-active .results-panel { display: none; }
     flex-wrap: nowrap;
   }
   .headline-item { min-width: 0; }
-  .headline-age { font-size: 0.72rem; margin-bottom: 0.1rem; }
-  .headline-amount { font-size: 1.15rem; }
-  .headline-amount span { font-size: 0.72rem; }
+  .headline-age { font-size: 0.62rem; margin-bottom: 0.1rem; }
+  .headline-amount { font-size: 1rem; }
+  .headline-amount span { font-size: 0.65rem; }
   .headline-note { font-size: 0.68rem; margin-top: 0.25rem; }
 }
 
@@ -420,7 +399,6 @@ body.guided-flow-active .results-panel { display: none; }
 }
 
 /* "Where do I find this?" TRS guidance expanders */
-.guided-intro { margin: 0; }
 .trs-help {
   margin: -0.35rem 0 0.55rem;
   font-size: 0.75rem;
