@@ -75,7 +75,7 @@ function trsDocLegacy(section, highlight) {
 
 const TRS_GUIDES = {
   carePotLastStatement: {
-    text: 'Log in at totalrewardstatements.nhs.uk (or use a posted NHSBSA estimate letter). On the <strong>2015 Scheme</strong> statement, under “Accrued Retirement Benefits”, copy the yearly <strong>Pension</strong> figure. Use the full figure — not the “Pension (reduced)” line, which assumes you take the maximum lump sum. This figure should already include the McCloud remedy — the automatic fix that gives you the better of the old and new scheme rules for 2015–2022 service.',
+    text: 'Log in to the My NHS Pension portal at mynhspension.nhsbsa.nhs.uk (or use a posted NHSBSA estimate letter). On the <strong>2015 Scheme</strong> statement, under “Accrued Retirement Benefits”, copy the yearly <strong>Pension</strong> figure. Use the full figure — not the “Pension (reduced)” line, which assumes you take the maximum lump sum. This figure should already include the McCloud remedy — the automatic fix that gives you the better of the old and new scheme rules for 2015–2022 service.',
     doc: () => trsDoc2015('pension'),
   },
   carePotStatementTaxYearEnd: {
@@ -270,7 +270,7 @@ const WIZARD_STEPS = [
     question: 'Do you have NHS service from before 2015?',
     help: 'If you were in the NHS pension scheme before April 2015, you’ll also have benefits in the older 1995 or 2008 Section — usually worth a lot, so it’s worth digging out.',
     notSure: true,
-    notSureExplainer: 'Your Total Reward Statement (TRS) will show a “1995 Section” or “2008 Section” block if you have one — log in at totalrewardstatements.nhs.uk. For now we’ll assume you don’t, which may understate your pension.',
+    notSureExplainer: 'Your pension statement will show a “1995 Section” or “2008 Section” block if you have one — log in to the My NHS Pension portal at mynhspension.nhsbsa.nhs.uk. For now we’ll assume you don’t, which may understate your pension.',
     revealFields: ['legacy1995Pension', 'legacy1995LumpSum', 'legacy2008Pension', 'legacy2008LumpSum'],
   },
   {
